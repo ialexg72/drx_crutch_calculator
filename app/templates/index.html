@@ -1,0 +1,18 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Загрузка XML файла</title>
+</head>
+<body>
+    <h1>Загрузите ваш XML файл</h1>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="xml_file" accept=".xml" required>
+        <button type="submit">Отправить</button>
+    </form>
+    {% if report_link %}
+        <p>Отчет готов: <a href="{{ report_link }}" download>Скачать отчет</a></p>
+    {% endif %}
+</body>
+</html>
