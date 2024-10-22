@@ -66,6 +66,8 @@ def upload_xml():
     # Перекидываем данные в переменные
     concurrent_users = int(data.get('concurrentUsers', ''))
     redundancy = data.get('redundancy', '')
+    mobileusers = int(data.get('mobileappusers', ''))
+
     # [Перекрестился, и пошел с богом]
     # 1. Расчет узлов веб-серверов
     # 1.1 Рассчитаем какое кол-во веб-сервером нам требуется.
@@ -134,6 +136,121 @@ def upload_xml():
     else:
         SRVUNITHDD = "0"
 
+    # 2. Расчет узлов микросервисов --------------------------------------------------------------
+    # 2.1 Расчет кол-ва узлов
+    if concurrent_users > 500:
+        numofms = concurrent_users / 2500
+        numofms_rnd = math.ceil(numofws)
+        if redundancy.lower()  == "true":
+            numofms_rnd = numofms_rnd + 1
+        else:
+            numofms_rnd
+    else:
+        numofms_rnd = "0"
+
+    #2.2 Расчет кол-ва ядер
+    def round_up_to_ms(SRVUNIT_MS_CPU):
+        if SRVUNIT_MS_CPU % 2 == 0:
+            return SRVUNIT_MS_CPU
+        else:
+            return SRVUNIT_MS_CPU + 1
+    def compute_result(concurrent_users, numofms_rnd, redundancy):
+        if concurrent_users == 0 or numofms_rnd == 0:
+            SRVUNIT_MS_CPU = 0
+        elif concurrent_users < 1001:
+            SRVUNIT_MS_CPU = 6
+        else:
+            if redundancy.lower() == "true":
+                if numofms_rnd - 1 <= 0:
+                    raise ValueError("При redundancy='true' значение numofmsrnd должно быть больше 1.")
+                temp_ms_up = concurrent_users / (numofms_rnd - 1) / 500
+                temp_roundedms_up = math.ceil(temp_ms_up)
+                SRVUNIT_MS_CPU = temp_roundedms_up * 2 + 2
+            else:
+                temp_ms_up = concurrent_users / numofms_rnd / 500
+                temp_roundedms_up = math.ceil(temp_ms_up)
+                SRVUNIT_MS_CPU = temp_roundedms_up * 2 + 2
+        SRVUNIT_MS_CPU = round_up_to_ms(SRVUNIT_MS_CPU)
+        return SRVUNIT_MS_CPU
+    SRVUNIT_MS_CPU = compute_result(concurrent_users, numofms_rnd, redundancy)
+
+    # 2.3 Расчет кол-ва RAM
+    def calculate_SRVUNIT_MS_RAM(concurrent_users, numofms_rnd, redundancy):
+        if concurrent_users == 0 or numofms_rnd == 0:
+            value = 0
+        elif concurrent_users < 1501:
+            value = 12
+        else:
+            if redundancy.lower() == "true":
+                denominator = numofms_rnd - 1
+                if denominator > 0:
+                    temp = math.ceil(concurrent_users / denominator / 1000)
+                    value = temp * 6
+                else:
+                    value = 0
+            else:
+                temp = math.ceil(concurrent_users / numofms_rnd / 1000)
+                value = temp * 6
+        if value % 2 != 0:
+            value += 1
+        return value
+    SRVUNIT_MS_RAM = calculate_SRVUNIT_MS_RAM(concurrent_users, numofms_rnd, redundancy)
+
+    #2.4 Расчет HDD
+    if concurrent_users > 500:
+        SRVUNIT_MS_HDD = 100
+    else:
+        SRVUNIT_MS_HDD = 0
+
+    # 3 Расчеты для сервиса Nomad
+    # 3.1 Считаем кол-во узлов
+    def calculate_nomad_count(mobileusers, redundancy):
+        if mobileusers < 100:
+            count = 0
+        else:
+            divided_value = mobileusers / 1000
+            rounded_value = math.ceil(divided_value)
+            if redundancy.lower() == "true":
+                return rounded_value + 1
+            else:
+                return rounded_value
+
+    #3.2 Считаем CPU
+    def calculate_nomad_cpu(mobileusers, redundancy):
+        if mobileusers == 0:
+            return 0
+        else:
+            divided_value = mobileusers / 1000
+            rounded_value = math.ceil(divided_value)
+            if redundancy.lower() == "true":
+                return rounded_value + 1
+            else:
+                return rounded_value
+
+    #3.3 Считаем RAM
+    nomad_count = calculate_nomad_count(mobileusers, redundancy)
+    def calculate_nomad_ram(mobileusers, redundancy, nomad_count):
+        if mobileusers < 100:
+            result = 0
+        else:
+            if redundancy.lower() == "true":
+                if nomad_count == 1:
+                    raise ValueError("G5 не должно быть равно 1, чтобы избежать деления на ноль.")
+                value = (mobileusers / (nomad_count - 1)) / 50 * 1.5 + 2
+            else:
+                value = (mobileusers / nomad_count) / 50 * 1.5 + 2
+            rounded = math.ceil(value)  
+            if rounded % 2 != 0:
+                rounded += 1
+            result = rounded
+        return result    
+
+    #3.4 Считаем HDD
+    if mobileusers != 0:
+        calculate_nomad_hdd = 100
+    else:
+        calculate_nomad_hdd = 0
+   
     # Загружаем шаблон Word
     template_path = os.path.join(app.config['TEMPLATE_FOLDER'], 'RecomendBaseTpl4.10.docx')
     if not os.path.exists(template_path):
@@ -172,9 +289,19 @@ def upload_xml():
         "SRVUNITCPU": str(SRVUNITCPUWS),
         "SRVUNITRAM": str(SRVUNIT_RAM_WS),
         "SRVUNITHDD": str(SRVUNITHDD),
+        #Блок микросервисов
+        "SRVUNIT_MS_Count": str(numofms_rnd),
+        "SRVUNIT_MS_CPU": str(SRVUNIT_MS_CPU), 
+        "SRVUNITMSRAM": str(SRVUNIT_MS_RAM), # Проблема, не заменяется значение в файле.
+        "SRVUNIT_MS_HDD": str(SRVUNIT_MS_HDD), # Проблема, не заменяется значение в файле.
+        #Nomad
+        "NOMAD_COUNT": str(calculate_nomad_count(mobileusers, redundancy)),
+        "NOMAD_CPU": str(calculate_nomad_cpu(mobileusers, redundancy)),
+        "NOMAD_RAM": str(calculate_nomad_ram(mobileusers, redundancy, nomad_count)),
+        "NOMAD_HDD": str(calculate_nomad_hdd),
         # Прирост и миграция
-        "ImportDataSize": str(data.get('importhistorydata', '')),
-        "YearlyDataSize": str(data.get('annualdatagrowth', '')),
+        #"ImportDataSize": str(data.get('importhistorydata', '')),
+        #"YearlyDataSize": str(data.get('annualdatagrowth', '')),
     }
 
     for placeholder, value in replacements.items():
