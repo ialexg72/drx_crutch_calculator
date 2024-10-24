@@ -28,6 +28,7 @@ ENV FLASK_APP=app.py
 
 # Устанавливаем переменную окружения для Flask
 ENV FLASK_RUN_HOST=0.0.0.0
+ENV FLASK_DEBUG: 1
 
 # Команда запуска приложения
 CMD ["flask", "run"]

@@ -246,10 +246,57 @@ def upload_xml():
         return result    
 
     #3.4 Считаем HDD
-    if mobileusers != 0:
-        calculate_nomad_hdd = 100
-    else:
-        calculate_nomad_hdd = 0
+    def calculate_nomad_hdd(mobileusers):
+        if mobileusers != 0:
+            calculate_nomad_hdd = 100
+        else:
+            calculate_nomad_hdd = 0
+        return calculate_nomad_hdd        
+
+    #4 Считаем reverse proxy узлы
+    #4.1 Считаем кол-во узлов
+    def calculate_reverseproxy_count(concurrent_users, redundancy):
+        if concurrent_users != 0:
+            if redundancy.lower() == "true":
+                result = 2
+            else:
+                if concurrent_users < 500:
+                    result = 0
+                else:
+                    result = 1
+        else:
+            result = 0
+    reverseproxy_count = calculate_reverseproxy_count(concurrent_users, redundancy)
+    #4.2 Считаем кол-во ядер.
+    def calculate_reverseproxy_cpu(reverseproxy_count, concurrent_users):
+        if reverseproxy_count != 0:
+            divided = concurrent_users / 5000
+            ceiled = math.ceil(divided)
+            multiplied = ceiled * 2
+        else:
+            multiplied = 0
+        if multiplied % 2 != 0:
+            multiplied += 1 
+        return multiplied
+
+    #4.2 Считаем кол-во ОЗУ.
+    def calculate_reverseproxy_ram(reverseproxy_count, concurrent_users):
+        if reverseproxy_count != 0:
+            divided = concurrent_users / 5000
+            ceiled = math.ceil(divided)
+            multiplied = ceiled * 2
+        else:
+            multiplied = 0
+        if multiplied % 2 != 0:
+            multiplied += 1 
+        return multiplied
+    #4.2 Считаем кол-во ядер.
+    def calculate_reverseproxy_hdd(reverseproxy_count):
+        if reverseproxy_count != 0:
+            rp_hdd = 50
+        else:
+            rp_hdd = 0
+        return rp_hdd
    
     # Загружаем шаблон Word
     template_path = os.path.join(app.config['TEMPLATE_FOLDER'], 'RecomendBaseTpl4.10.docx')
@@ -298,7 +345,12 @@ def upload_xml():
         "NOMAD_COUNT": str(calculate_nomad_count(mobileusers, redundancy)),
         "NOMAD_CPU": str(calculate_nomad_cpu(mobileusers, redundancy)),
         "NOMAD_RAM": str(calculate_nomad_ram(mobileusers, redundancy, nomad_count)),
-        "NOMAD_HDD": str(calculate_nomad_hdd),
+        "NOMAD_HDD": str(calculate_nomad_hdd(mobileusers)),
+        #ReversePorxy
+        "RP_COUNT": str(calculate_reverseproxy_count(concurrent_users, redundancy)),
+        "RP_CPU": str(calculate_reverseproxy_cpu(reverseproxy_count, concurrent_users)),
+        "RP_RAM": str(calculate_reverseproxy_ram(reverseproxy_count, concurrent_users)),
+        "RP_HDD": str(calculate_reverseproxy_hdd(reverseproxy_count)),
         # Прирост и миграция
         #"ImportDataSize": str(data.get('importhistorydata', '')),
         #"YearlyDataSize": str(data.get('annualdatagrowth', '')),
