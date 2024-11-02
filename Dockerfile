@@ -1,5 +1,5 @@
 # Используем официальный Debian-образ с предустановленным Python
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 # Устанавливаем необходимые системные зависимости
 RUN apt-get update && apt-get install -y --no-install-recommends \
