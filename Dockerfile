@@ -7,6 +7,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     unzip \
     git \
+    xvfb \
+    libgbm1 \
+    libasound2 \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Устанавливаем DrawIO
+ENV DRAWIO_VERSION "18.0.1"
+WORKDIR /tmp
+RUN wget -O drawio-desktop.deb -q https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb \
+    && apt-get update && apt-get install -y ./drawio-desktop.deb \
+    && rm drawio-desktop.deb \
     && rm -rf /var/lib/apt/lists/*
 
 # Устанавливаем зависимости Python
@@ -14,21 +26,23 @@ COPY requirements.txt /tmp/
 RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
     rm /tmp/requirements.txt
 
-# Создаем рабочий каталог
-WORKDIR /app
+# Устанавливаем переменную окружения DISPLAY
+ENV DISPLAY=:99
 
 # Копируем код приложения
+WORKDIR /app
 COPY app/ /app/
 
 # Экспонируем порт 5000
 EXPOSE 5000
 
-# Устанавливаем переменную окружения для Flask
-ENV FLASK_APP=app.py
-
-# Устанавливаем переменную окружения для Flask
+# Устанавливаем переменные окружения для Flask
+ENV FLASK_APP=main.py
 ENV FLASK_RUN_HOST=0.0.0.0
-ENV FLASK_DEBUG: 1
 
-# Команда запуска приложения
-CMD ["flask", "run"]
+# Копируем скрипт entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Указываем скрипт entrypoint
+ENTRYPOINT ["/entrypoint.sh"]

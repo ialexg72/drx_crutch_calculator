@@ -17,7 +17,7 @@ from docx.shared import Inches
 from docx import Document
 import subprocess
 import logging
-
+import shutil
 
 app = Flask(__name__)
 
@@ -83,6 +83,7 @@ def upload_xml():
     operationsystem = data.get('ostype', '')
     version = data.get('version', '')
     kubernetes = data.get('kubernetes', '')
+    s3storage = data.get('s3-storage', '')
     redundancy = data.get('redundancy', '')
     monitoring = data.get('monitoring', '')
     database = data.get('database', '')
@@ -111,13 +112,14 @@ def upload_xml():
 
     # Загружаем шаблон Word
     if operationsystem.lower() == "linux":
-        template_path = os.path.join(app.config['TEMPLATE_FOLDER'], 'RecomendBaseTpl{version}_linux.docx')
+        template_path = os.path.join(app.config['TEMPLATE_FOLDER'], f'RecomendBaseTpl{version}_linux.docx')
     else:
-        template_path = os.path.join(app.config['TEMPLATE_FOLDER'], 'RecomendBaseTpl{version}_winux.docx')
+        template_path = os.path.join(app.config['TEMPLATE_FOLDER'], f'RecomendBaseTpl{version}_winux.docx')
     if not os.path.exists(template_path):
         print("Шаблон Word не найден.", 500)
     doc = docx.Document(template_path)
 
+#=======================================================Расчеты============================================================#
     #Функция для удаления не нужных блоков в таблицах
     def delete_row_from_table(table, row):
            tbl = table._tbl
@@ -174,6 +176,7 @@ def upload_xml():
             remove_specific_rows(doc, "Узел администрирования Kubernetes", 6)
             delete_paragraphs_by_text(doc, "Kubernetes")
             delete_paragraphs_by_text(doc, "На узле генерируется конфигурационный файл config.yml")
+            remove_specific_rows(doc, "Kubernetes API server", 7)
         else:
             print("Error")
 
@@ -425,6 +428,7 @@ def upload_xml():
         dcs_ram = 0
         dcs_hdd = 0
         remove_specific_rows(doc, "Узел службы ввода документов", 6)
+        remove_specific_rows(doc, "Периодичность импорта через средство захвата документов, док./час", 0)
         delete_paragraphs_by_text(doc, "Узлы DCS")
         layers_to_toggle.append("DCS")
 
@@ -464,6 +468,7 @@ def upload_xml():
         monitoring_hdd = 50
         monitoring_cpu = 16 if concurrent_users > 3000 else 8
         monitoring_ram = 32 if concurrent_users > 3000 else 16 
+        monitoring_index_size = math.ceil(concurrent_users/100*30)
         if concurrent_users > 2000:
             logstash_count = 1
             logstash_cpu = 4
@@ -484,10 +489,11 @@ def upload_xml():
         logstash_cpu = 0
         logstash_ram = 0
         logstash_hdd = 0
+        monitoring_index_size = 0
         remove_specific_rows(doc, "Узел решения «Мониторинг системы Directum RX»", 6)
         delete_paragraphs_by_text(doc, "Узел решения «Мониторинг системы Directum RX»")
         remove_specific_rows(doc, "Узел Logstash", 6)
-        remove_specific_rows(doc, "Разделы для индексов системы мониторинга", 1)
+        remove_specific_rows(doc, "Разделы для индексов системы мониторинга", 0)
         layers_to_toggle.append("MONITORING")
 
     #Узлы АРИО
@@ -655,21 +661,25 @@ def upload_xml():
         lk_ram = (lk_ram % 2 == 0)
         #Калькуляция узлов доп ноды ЛК
         if lk_users > 4999:
-                additional_lk_count = math.ceil(lk_users / 20000)
-                additional_lk_cpu = math.ceil(lk_users / additional_lk_count / 3500)*2
-                additional_lk_ram = math.ceil(lk_users / additional_lk_count / 3500)*4
-                additional_lk_hdd = 100
-            else:
-                additional_lk_count = 0
-                additional_lk_cpu = 0
-                additional_lk_ram = 0
-                additional_lk_hdd = 0
-                remove_specific_rows(doc, "Дополнительный сервисный узел Directum RX для «Личный кабинет»")
+            additional_lk_count = math.ceil(lk_users / 20000)
+            additional_lk_cpu = math.ceil(lk_users / additional_lk_count / 3500)*2
+            additional_lk_ram = math.ceil(lk_users / additional_lk_count / 3500)*4
+            additional_lk_hdd = 100
+        else:
+            additional_lk_count = 0
+            additional_lk_cpu = 0
+            additional_lk_ram = 0
+            additional_lk_hdd = 0
+            remove_specific_rows(doc, "Дополнительный сервисный узел Directum RX для «Личный кабинет»")
     else:
         lk_count = 0
         lk_cpu = 0
         lk_ram = 0
         lk_hdd = 0
+        additional_lk_count = 0
+        additional_lk_cpu = 0
+        additional_lk_ram = 0
+        additional_lk_hdd = 0
         delete_paragraphs_by_text(doc, "«Личный кабинет» - решение позволяет")
         delete_paragraphs_by_text(doc, "Архитектура платформы личного кабинета")
         delete_paragraphs_by_text(doc, "Сервер приложения личного кабинета")
@@ -686,19 +696,36 @@ def upload_xml():
         remove_specific_rows(doc, "Узлы решения «Личный кабинет»", 6)
         remove_specific_rows(doc, "Узел сервисов решения «Личный кабинет»", 6)
         remove_specific_rows(doc, "HR Pro (личный кабинет)", 1)
+        remove_specific_rows(doc, "Дополнительный сервисный узел Directum RX для «Личный кабинет»", 6)
         layers_to_toggle.append("HRPRO")
+
+    #Узел S3 Tool
+    if float(version) >= 4.11:
+        if s3storage.lower() == "false":
+            remove_specific_rows(doc, "Узел переноса данных в объектные хранилища S3", 6)
+            delete_paragraphs_by_text(doc, "Объектное S3 хранилище")
+            delete_paragraphs_by_text(doc, "Узел переноса данных в объектные хранилища S3")
+            s3storage_cpu = 0
+            s3storage_ram = 0
+            s3storage_count = 0
+        else:
+            s3storage_cpu = 4
+            s3storage_ram = 4
+            s3storage_count = 1
 
     #Расчет хранилищ
     #Исторические данные
-    importhistorydata_size = importhistorydata * midsizedoc /1024 / 1024
-    importhistorydata_size = math.ceil(importhistorydata_size)
+    importhistorydata_size = round(importhistorydata * midsizedoc /1024 / 1024, 0)
+    if importhistorydata_size == 0:
+        remove_specific_rows(doc, "Исторические данные, объем в ГБ", 0)
+    else:
+        pass
     #Годовой прирост документов
-    annualdatagrowth_size = annualdatagrowth * midsizedoc / 1024 / 1024
-    annualdatagrowth_size = math.ceil(annualdatagrowth_size) 
+    annualdatagrowth_size = round(annualdatagrowth * midsizedoc / 1024 / 1024, 0)
     #Объем основого хранилища тел документов
-    main_storage_doc = math.ceil((annualdatagrowth_size * 6) + importhistorydata_size)
+    main_storage_doc = round((annualdatagrowth_size * 6) + importhistorydata_size, 0)
     #Объем резервного хранилища
-    reserve_storage_doc = math.ceil(main_storage_doc*2)
+    reserve_storage_doc = round(main_storage_doc*2, 0)
     #Объем основного хранилища БД
     if concurrent_users != 0 or sql_count != 0:
         main_storage_db = main_storage_doc * 0.025 + (concurrent_users / 100 * 5)
@@ -712,7 +739,7 @@ def upload_xml():
                 main_storage_db = 100
             else:
                 main_storage_db  
-        main_storage_db = math.ceil(main_storage_db)
+        main_storage_db = round(main_storage_db, 0)
     else:
         main_storage_db = 0
     #Объем резервного хранилища БД
@@ -723,7 +750,7 @@ def upload_xml():
     #Разделы высокоскоростных данных (разделы ВМ под ОС, разделы БД)
     highspeed_storage = (
         main_storage_db + webserver_hdd + ms_hdd + reverseproxy_hdd + nomad_hdd + rrm_hdd + onlineeditor_hdd + monitoring_hdd + logstash_hdd + ario_hdd + dtes_hdd
-        +  elasticsearch_hdd + lk_hdd
+        +  elasticsearch_hdd + lk_hdd + additional_lk_hdd
         )
     #Разделы индексов полнотекстового поиска
     def calculate_serachindex_size(elasticsearch, redundancy, database, main_storage_doc, main_storage_db):
@@ -738,11 +765,6 @@ def upload_xml():
             result = 0
         return result
     elasticsearch_serachindex_size = calculate_serachindex_size(elasticsearch, redundancy, database, main_storage_doc, main_storage_db)
-    #Разделы индексов системы мониторинга
-    if monitoring.lower == "true":
-        monitoring_index_size = math.ceil(concurrent_users/100*30)
-    else:
-        monitoring_index_size = 0
     #Разделы средненагруженных данных (ФХ тел документов) = main storage doc
     #Разделы сервисных баз данных СУБД
     service_db_size = math.ceil(concurrent_users/500*2)
@@ -864,14 +886,19 @@ def upload_xml():
         "ADDLKCPU": str(additional_lk_cpu),
         "ADDLKRAM": str(additional_lk_ram),
         "ADDLKHDD": str(additional_lk_hdd),
+        #S3 Tool
+        "S3CPU": str(s3storage_cpu),
+        "S3RAM": str(s3storage_ram),
+        "S3COUNT": str(s3storage_count),
         #Сумма ресурсов
         "UnitsCPU": str((webserver_count*webserver_cpu)+(ms_count*ms_cpu)+(k8s_count*k8s_cpu)+(nomad_count*nomad_cpu)+(reverseproxy_count*reverseproxy_cpu)+(sql_count*sql_cpu)
             +(dcs_count*dcs_cpu)+(elasticsearch_count*elasticsearch_cpu)+(monitoring_count*monitoring_cpu)+(ario_count*ario_cpu)+(dtes_count*dtes_cpu)
-            +(onlineeditor_count*onlineeditor_cpu)+(lk_count*lk_cpu)+(additional_lk_count*additional_lk_cpu)
+            +(onlineeditor_count*onlineeditor_cpu)+(lk_count*lk_cpu)+(additional_lk_count*additional_lk_cpu)+(s3storage_count*s3storage_cpu)
             ), 
         "UnitsRAM": str((webserver_count*webserver_ram)+(ms_count*ms_ram)+(k8s_count*k8s_ram)+(nomad_count*nomad_ram)+(reverseproxy_count*reverseproxy_ram)+(sql_count*sql_ram)
             +(dcs_count*dcs_ram)+(elasticsearch_count*elasticsearch_ram)+(monitoring_count*monitoring_ram)+(ario_count*ario_ram)+(dtes_count*dtes_ram)
-            +(onlineeditor_count*onlineeditor_ram)+(lk_count*lk_ram)+(additional_lk_count*additional_lk_ram)),
+            +(onlineeditor_count*onlineeditor_ram)+(lk_count*lk_ram)+(additional_lk_count*additional_lk_ram)+(s3storage_count*s3storage_ram)
+            ),
         # Прирост и миграция
         "ImportDataSize": str(round(importhistorydata_size / 1024, 1)) + " ТБ" if importhistorydata_size >= 1000 else str(importhistorydata_size) + " ГБ",
         "YearlyDataSize": str(round(annualdatagrowth_size / 1024, 1)) + " ТБ" if annualdatagrowth_size >= 1000 else str(annualdatagrowth_size) + " ГБ",
@@ -958,7 +985,7 @@ def upload_xml():
             layer_name = layer.get('value')
             print(f"Слой '{layer_name}' установлен видимым: {visibility}")
 
-    def save_drawio_as_png(tree: etree._ElementTree, scheme_template_path: str, save_dir: str = "output") -> str:
+    def save_drawio_as_png(tree: etree._ElementTree, scheme_template_path: str, save_dir: str = "tmp") -> str:
         unique_id = uuid.uuid4()
         unique_folder = os.path.join(save_dir, f"schema_{unique_id}")
         os.makedirs(unique_folder, exist_ok=True)
@@ -974,35 +1001,37 @@ def upload_xml():
             logging.error(f"Не удалось записать временный файл: {e}")
             raise
         
-        # Указание пути к исполняемому файлу
-        drawio_executable = r"C:\Program Files\draw.io\draw.io.exe"  # Обновите путь при необходимости
+        # Указание пути к исполняемому файлу drawio-exporter
+        drawio_exporter_executable = r"drawio"  # Обновите путь, если необходимо
         
-        if not os.path.isfile(drawio_executable):
-            raise FileNotFoundError(f"Исполняемый файл Draw.io не найден по пути: {drawio_executable}")
+        # Проверка наличия исполняемого файла в PATH или по указанному пути
+        if not shutil.which(drawio_exporter_executable):
+            raise FileNotFoundError(f"Исполняемый файл drawio-exporter не найден. Убедитесь, что он установлен и доступен в PATH.")
         
         command = [
-            drawio_executable,
-            '-x',
-            '-f', 'png',
+            drawio_exporter_executable,
+            '-x', temp_drawio_path,
             '-o', png_output_path,
-            temp_drawio_path
+            '-f', 'png',
+            '-b', '5',
+            '--no-sandbox'
         ]
         
         logging.debug(f"Выполнение команды: {' '.join(command)}")
         
         try:
             result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            logging.debug(f"Draw.io успешно конвертировал файл. Вывод: {result.stdout}")
+            logging.debug(f"drawio-exporter успешно конвертировал файл. Вывод: {result.stdout}")
             if result.stderr:
-                logging.warning(f"Предупреждение от Draw.io: {result.stderr}")
+                logging.warning(f"Предупреждение от drawio-exporter: {result.stderr}")
         except subprocess.CalledProcessError as e:
-            logging.error(f"Ошибка при конвертации в SVG: {e.stderr}")
-            raise RuntimeError(f"Ошибка при конвертации в SVG: {e.stderr.strip()}") from e
+            logging.error(f"Ошибка при конвертации в PNG: {e.stderr}")
+            raise RuntimeError(f"Ошибка при конвертации в PNG: {e.stderr.strip()}") from e
         
-        # Проверка существования SVG-файла
+        # Проверка существования PNG-файла
         if not os.path.isfile(png_output_path):
-            logging.error(f"SVG-файл не был создан по пути: {png_output_path}")
-            raise FileNotFoundError(f"SVG-файл не был создан по пути: {png_output_path}")
+            logging.error(f"PNG-файл не был создан по пути: {png_output_path}")
+            raise FileNotFoundError(f"PNG-файл не был создан по пути: {png_output_path}")
         
         # Удаление временного файла
         try:
@@ -1012,6 +1041,7 @@ def upload_xml():
             logging.error(f"Не удалось удалить временный файл {temp_drawio_path}: {e}")
         
         return png_output_path
+
 
     # Настройка логирования
     logging.basicConfig(
@@ -1097,7 +1127,7 @@ def upload_xml():
         return saved_file        
     
     #Условия для выборки схем
-    TEMPLATE_SCHEMES = r'schemes\schemes_template'
+    TEMPLATE_SCHEMES = r'schemes_template'
     app.config['TEMPLATE_SCHEMES'] = TEMPLATE_SCHEMES
     if redundancy.lower() == "true" and operationsystem.lower() == "linux" and kubernetes.lower() == "false" and lk_users == 0:
         scheme_template = os.path.join(app.config['TEMPLATE_SCHEMES'], 'ha.drawio')
