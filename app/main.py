@@ -5,12 +5,13 @@ import uuid
 import math
 import docx
 import xml.etree.ElementTree as ET
-from flask import Flask, request, render_template, send_from_directory, redirect, url_for
-from docx.table import _Row
+from flask import Flask, request, render_template, send_from_directory, redirect, url_for, jsonify
+from docx.table import Table, _Row
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from datetime import datetime
 from typing import List
+from typing import Any
 from lxml import etree
 from typing import Union
 from docx.shared import Inches
@@ -21,6 +22,7 @@ import shutil
 
 app = Flask(__name__)
 
+#=======================================================Общие настройки============================================================#
 # Папки для загрузок и отчетов
 UPLOAD_FOLDER = 'uploads'
 REPORT_FOLDER = 'ready_reports'
@@ -35,11 +37,23 @@ for folder in [UPLOAD_FOLDER, REPORT_FOLDER, TEMPLATE_FOLDER]:
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['REPORT_FOLDER'] = REPORT_FOLDER
 app.config['TEMPLATE_FOLDER'] = TEMPLATE_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Максимальный размер файла: 16MB
+app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024  # Максимальный размер файла: 1MB
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(f"app.log", encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 #Массив для отключения сервисов при составлении схемы
 layers_to_toggle = []
 
+#=======================================================Маршуруты============================================================#
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
@@ -53,7 +67,9 @@ def upload_xml():
         return "Имя файла пустое", 400
     if not file.filename.lower().endswith('.xml'):
         return "Неподдерживаемый формат файла. Пожалуйста, загрузите XML файл.", 400
-
+    
+#=======================================================Работа с XML============================================================#
+    
     # Сохраняем загруженный XML файл
     filename = f"{uuid.uuid4()}.xml"
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -63,8 +79,10 @@ def upload_xml():
     try:
         tree = ET.parse(filepath)
         root = tree.getroot()
+        logging.debug(f"Парсинг XML выполнен успешно")
     except ET.ParseError:
-        return "Ошибка при разборе XML файла.", 400
+        logging.error(f"Не удалось спарсить данные в XML")
+        raise
 
     # Извлекаем необходимые данные из XML
     data = {}
@@ -80,13 +98,21 @@ def upload_xml():
     # Закидываем данные из XML в переменные
         #Общая информация
     organization = data.get('organization', '')
+    logging.debug(f"Организация {organization}")
     operationsystem = data.get('ostype', '')
+    logging.debug(f"Оепрационная система {operationsystem}")
     version = data.get('version', '')
+    logging.debug(f"Версия {version}")
     kubernetes = data.get('kubernetes', '')
-    s3storage = data.get('s3-storage', '')
+    logging.debug(f"kubernetes {kubernetes}")
+    s3storage = data.get('s3storage', '')
+    logging.debug(f"S3 Хранилище {s3storage}")
     redundancy = data.get('redundancy', '')
+    logging.debug(f"Отказоустойчивость {redundancy}")
     monitoring = data.get('monitoring', '')
+    logging.debug(f"Мониторинг {monitoring}")
     database = data.get('database', '')
+    logging.debug(f"Тип СУБД {database}")
         #Активность пользователей
     registeredUsers = int(data.get('registeredUsers', ''))
     peakLoad = int(data.get('peakLoad', ''))
@@ -94,6 +120,7 @@ def upload_xml():
     concurrent_users = int(data.get('concurrentUsers', ''))
     mobileusers = int(data.get('mobileappusers', ''))
     lk_users = int(data.get('lkusers', ''))
+    logging.info(f"Пользователи личного кабинета {lk_users}")
         #Прирост данных
     importhistorydata = int(data.get('importhistorydata', ''))
     annualdatagrowth = int(data.get('annualdatagrowth', ''))
@@ -109,43 +136,78 @@ def upload_xml():
     ario = data.get('ario', '')
     ariodocin = int(data.get('ariodocin', ''))
 
-
+#=======================================================Условия для выбора шаблона Word============================================================#
     # Загружаем шаблон Word
     if operationsystem.lower() == "linux":
         template_path = os.path.join(app.config['TEMPLATE_FOLDER'], f'RecomendBaseTpl{version}_linux.docx')
+    elif kubernetes.lower() == "true":
+        template_path = os.path.join(app.config['TEMPLATE_FOLDER'], f'RecomendBaseTpl{version}_kubernetes.docx')
     else:
-        template_path = os.path.join(app.config['TEMPLATE_FOLDER'], f'RecomendBaseTpl{version}_winux.docx')
+        template_path = os.path.join(app.config['TEMPLATE_FOLDER'], f'RecomendBaseTpl{version}_windows.docx')
     if not os.path.exists(template_path):
-        print("Шаблон Word не найден.", 500)
-    doc = docx.Document(template_path)
+        logging.debug("Шаблон Word не найден.")
+    try:
+        doc = docx.Document(template_path)
+        logging.debug(f"Выбран шаблон {template_path}")
+    except ET.ParseError:
+        logging.error(f"Не удалось подобрать шаблон")
+        raise
+#=======================================================Функции манипуляций с текстом ============================================================#
+    def delete_row_from_table(table: Table, row: _Row) -> None:
+        """
+        Удаляет указанную строку из таблицы.
 
-#=======================================================Расчеты============================================================#
-    #Функция для удаления не нужных блоков в таблицах
-    def delete_row_from_table(table, row):
-           tbl = table._tbl
-           tr = row._tr
-           tbl.remove(tr)
+        :param table: Таблица из документа.
+        :param row: Строка, которую нужно удалить.
+        """
+        try:
+            tbl = table._tbl
+            tr = row._tr
+            tbl.remove(tr)
+            logging.info(f"Удалена строка из таблицы: {row}")
+        except Exception as e:
+            logging.error(f"Ошибка при удалении строки: {e}")
 
-    def remove_specific_rows(doc_path, target_text, num_rows_to_delete=5):
-       # Открываем документ 
-       # Проходим по всем таблицам в документе
-       for table in doc.tables:
-           # Индекс текущей строки
-           i = 0
-           while i < len(table.rows):
-               row = table.rows[i]
-               # Проверяем все ячейки в строке на наличие целевого текста
-               if any(target_text in cell.text for cell in row.cells):
-                   # Удаляем найденную строку и следующие num_rows_to_delete строк
-                   for _ in range(num_rows_to_delete + 1):  # +1 для самой найденной строки
-                       if i < len(table.rows):
-                           delete_row_from_table(table, table.rows[i])
-                       else:
-                           break
-                   # После удаления сдвигаем индекс обратно, чтобы продолжить проверку
-                   i -= 1
-               i += 1
+    def remove_specific_rows(doc, target_text: str, num_rows_to_delete: int = 5) -> None:
+        """
+        Удаляет строки из всех таблиц в документе, содержащие целевой текст и последующие num_rows_to_delete строк.
 
+        :param doc_path: Путь к документу.
+        :param target_text: Текст для поиска в строках.
+        :param num_rows_to_delete: Количество последующих строк для удаления.
+        """
+        try:
+            # Открываем документ)
+            # Нормализуем целевой текст для регистронезависимого поиска
+            normalized_target_text = target_text.lower().strip()
+            logging.debug(f"Нормализованный целевой текст: '{normalized_target_text}'")
+
+            # Проходим по всем таблицам в документе
+            for table_index, table in enumerate(doc.tables, start=1):
+                logging.info(f"Обработка таблицы {table_index}")
+                i = 0
+                while i < len(table.rows):
+                    row = table.rows[i]
+                    # Извлекаем полный текст из строки с учетом всех ячеек
+                    row_text = ' '.join(cell.text for cell in row.cells).lower().strip()
+                    logging.debug(f"Текст строки {i + 1} в таблице {table_index}: '{row_text}'")
+                    
+                    # Используем регулярное выражение для более гибкого поиска
+                    if re.search(re.escape(normalized_target_text), row_text):
+                        logging.info(f"Найден целевой текст в таблице {table_index}, строка {i + 1}")
+                        # Удаляем найденную строку и следующие num_rows_to_delete строк
+                        for _ in range(num_rows_to_delete + 1):  # +1 для самой найденной строки
+                            if i < len(table.rows):
+                                delete_row_from_table(table, table.rows[i])
+                                logging.info(f"Строка {i + 1} удалена из таблицы {table_index}")
+                            else:
+                                break
+                        # После удаления сдвигаем индекс назад, чтобы продолжить проверку
+                        i -= 1
+                    i += 1
+        except Exception as e:
+            logging.error(f"Ошибка при обработке документа: {e}")
+    
     #Функция поиска и удаления текста
     def delete_paragraphs_by_text(doc, text_to_delete):
         paragraphs = doc.paragraphs
@@ -154,7 +216,29 @@ def upload_xml():
                 p = paragraph._element
                 p.getparent().remove(p)
                 p._p = p._element = None
+    
+    #Функция для замены текста в шаблоне
+    def replace_placeholder(doc, placeholder, value):
+        # Обработка параграфов
+        for paragraph in doc.paragraphs:
+            if placeholder in paragraph.text:
+                # Объединение всех runs в одном тексте
+                inline = paragraph.runs
+                full_text = ''.join([run.text for run in inline])
+                if placeholder in full_text:
+                    new_text = full_text.replace(placeholder, value)
+                    # Очистка существующих runs
+                    for run in inline:
+                        run.text = ''
+                    # Добавление нового текста в первый run
+                    inline[0].text = new_text
 
+        # Обработка таблиц
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    replace_placeholder(cell, placeholder, value)
+#=======================================================Расчеты сервисов============================================================#
     # Расчеты Kubernetes Control-plane
     if kubernetes.lower() == "true":
         if redundancy.lower() == "true":
@@ -169,16 +253,6 @@ def upload_xml():
         k8s_cpu = 0
         k8s_ram = 0
         k8s_hdd = 0
-        if len(doc.tables) > 4:
-            table = doc.tables[4]
-            start_index = 1
-            end_index = 7
-            remove_specific_rows(doc, "Узел администрирования Kubernetes", 6)
-            delete_paragraphs_by_text(doc, "Kubernetes")
-            delete_paragraphs_by_text(doc, "На узле генерируется конфигурационный файл config.yml")
-            remove_specific_rows(doc, "Kubernetes API server", 7)
-        else:
-            print("Error")
 
     #Расчет узлов веб-серверов
     def calculate_webserver_count(concurrent_users, redundancy):
@@ -220,7 +294,7 @@ def upload_xml():
     webserver_hdd = 100 if webserver_cpu != 0 else 0
 
     # Расчет узлов микросервисов
-    if concurrent_users > 500:
+    if concurrent_users > 499:
         def calculate_ms_count(concurrent_users, redundancy):
             if concurrent_users > 500:
                 ms_count = math.ceil(concurrent_users / 2500)
@@ -258,9 +332,6 @@ def upload_xml():
         ms_cpu = 0
         ms_ram = 0
         ms_hdd = 0
-        remove_specific_rows(doc, "Узлы микросервисов Directum RX", 6)
-        delete_paragraphs_by_text(doc, "Узлы микросервисов Directum RX")
-        delete_paragraphs_by_text(doc, "На узле генерируется конфигурационный файл config.yml")
 
     #Расчеты для сервиса Nomad
     if mobileusers != 0:
@@ -296,8 +367,6 @@ def upload_xml():
         nomad_cpu = 0
         nomad_ram = 0
         nomad_hdd = 0
-        remove_specific_rows(doc, "Узлы сервиса NOMAD", 6)
-        delete_paragraphs_by_text(doc, "Сервис NOMAD (NomadService)")
         layers_to_toggle.append("NOMAD")
 
 
@@ -375,7 +444,7 @@ def upload_xml():
             else:
                 return ceil_num + 1
         else:
-            floor_num = math.floor(number)
+            floor_num = math.floor(ceil_num)
             if floor_num % 2 == 0:
                 return floor_num
             else:
@@ -427,9 +496,6 @@ def upload_xml():
         dcs_cpu = 0
         dcs_ram = 0
         dcs_hdd = 0
-        remove_specific_rows(doc, "Узел службы ввода документов", 6)
-        remove_specific_rows(doc, "Периодичность импорта через средство захвата документов, док./час", 0)
-        delete_paragraphs_by_text(doc, "Узлы DCS")
         layers_to_toggle.append("DCS")
 
     # Полнотекстовый поиск
@@ -456,10 +522,6 @@ def upload_xml():
         elasticsearch_cpu = 0
         elasticsearch_ram = 0
         elasticsearch_hdd = 0
-        remove_specific_rows(doc, "Узел полнотекстового поиска", 6)
-        remove_specific_rows(doc, "Разделы для индексов полнотекстового поиска", 1)
-        delete_paragraphs_by_text(doc, "Узел полнотекстового поиска – виртуальная машина")
-        delete_paragraphs_by_text(doc, "Хранилище для индексов полнотекстового поиска")
         layers_to_toggle.append("ELASTIC")
 
     #Мониторинг
@@ -479,7 +541,6 @@ def upload_xml():
             logstash_cpu = 0
             logstash_ram = 0
             logstash_hdd = 0
-            remove_specific_rows(doc, "Узел Logstash", 6)
     else:
         monitoring_count = 0
         monitoring_hdd = 0
@@ -490,10 +551,6 @@ def upload_xml():
         logstash_ram = 0
         logstash_hdd = 0
         monitoring_index_size = 0
-        remove_specific_rows(doc, "Узел решения «Мониторинг системы Directum RX»", 6)
-        delete_paragraphs_by_text(doc, "Узел решения «Мониторинг системы Directum RX»")
-        remove_specific_rows(doc, "Узел Logstash", 6)
-        remove_specific_rows(doc, "Разделы для индексов системы мониторинга", 0)
         layers_to_toggle.append("MONITORING")
 
     #Узлы АРИО
@@ -555,7 +612,6 @@ def upload_xml():
                 dtes_cpu = 0
                 dtes_ram = 0
                 dtes_hdd = 0
-                remove_specific_rows(doc, "Узел сервисов Directum Text Extractor Service", 6)
     else:
         dtes_count = 0
         dtes_cpu = 0
@@ -565,11 +621,6 @@ def upload_xml():
         ario_cpu = 0
         ario_ram = 0
         ario_hdd = 0
-        remove_specific_rows(doc, "Узел сервисов Directum Ario", 6)
-        remove_specific_rows(doc, "Узел сервисов Directum Text Extractor Service", 6)
-        remove_specific_rows(doc, "Сервисы Ario", 1)
-        delete_paragraphs_by_text(doc, "Сервисы Ario")
-        delete_paragraphs_by_text(doc, "** - для сервисов Ario рекомендуется использовать процессоры")
         layers_to_toggle.append("ARIO")
 
     #Узлы RRM
@@ -603,12 +654,9 @@ def upload_xml():
         rrm_cpu = 0
         rrm_ram = 0
         rrm_hdd = 0
-        delete_paragraphs_by_text(doc, "Узлы RabbitMQ, etcd+haproxy+keepalived (RMQ + EHK)")
-        remove_specific_rows(doc, "Узлы RabbitMQ, etcd + keepalived + haproxy (для кластера PG)", 6)
-
 
     #Узлы интеграции с онлайн редакторами
-    if onlineeditor != "none":
+    if onlineeditor.lower() != "none":
         onlineeditor_count = 1
         onlineeditor_hdd = 50
         def calculate_onlineeditor_cpu(concurrent_users):
@@ -624,87 +672,82 @@ def upload_xml():
         onlineeditor_cpu = 0
         onlineeditor_ram = 0
         onlineeditor_hdd = 0
-        remove_specific_rows(doc, "Узел решения «Интеграция с онлайн-редакторами OnlyOffice и Р7-Офис»", 6)
-        delete_paragraphs_by_text(doc, "Узел решения «Интеграция с онлайн-редакторами»")
         layers_to_toggle.append("ONLINEEDITOR")
 
     #Личны кабинет
-    if lk_users != 0:
-        #кол-во узлов
-        lk_hdd = 50
-        if redundancy.lower() == "true" or concurrent_users > 5000:
-            lk_count = 3
-        elif concurrent_users > 75000:
-            lk_count = 5
-        else:
-            lk_count = 1
-        #ЦПУ
-        if lk_count == 1:
-            lk_cpu = 6
-        else:
-            if lk_users < 50000:
-                lk_cpu = 4
+    def calculation_lk(lk_users, redundancy, concurrent_users):
+        if lk_users != 0:
+            #кол-во узлов
+            lk_hdd = 50
+            if redundancy.lower() == "true" or concurrent_users > 5000:
+                lk_count = 3
+            elif concurrent_users > 75000:
+                lk_count = 5
             else:
+                lk_count = 1
+            #ЦПУ
+            if lk_count == 1:
                 lk_cpu = 6
-        lk_cpu = (lk_cpu % 2 == 0)
-        #RAM
-        if lk_count == 1:
-            if lk_users < 1000:
-                lk_ram = 12
             else:
-                lk_ram = 18
-        else:
-            if lk_users < 50000:
-                lk_ram = 8
+                if lk_users < 50000:
+                    lk_cpu = 4
+                else:
+                    lk_cpu = 6
+            #RAM
+            if lk_count == 1:
+                if lk_users < 1000:
+                    lk_ram = 12
+                else:
+                    lk_ram = 18
             else:
-                lk_ram = 12
-        lk_ram = (lk_ram % 2 == 0)
-        #Калькуляция узлов доп ноды ЛК
-        if lk_users > 4999:
-            additional_lk_count = math.ceil(lk_users / 20000)
-            additional_lk_cpu = math.ceil(lk_users / additional_lk_count / 3500)*2
-            additional_lk_ram = math.ceil(lk_users / additional_lk_count / 3500)*4
-            additional_lk_hdd = 100
+                if lk_users < 50000:
+                    lk_ram = 8
+                else:
+                    lk_ram = 12
+            #Калькуляция узлов доп ноды ЛК
+            if lk_users > 4999:
+                additional_lk_count = math.ceil(lk_users / 20000)
+                additional_lk_cpu = math.ceil(lk_users / additional_lk_count / 3500)*2
+                additional_lk_ram = math.ceil(lk_users / additional_lk_count / 3500)*4
+                additional_lk_hdd = 100
+            else:
+                additional_lk_count = 0
+                additional_lk_cpu = 0
+                additional_lk_ram = 0
+                additional_lk_hdd = 0
         else:
+            lk_count = 0
+            lk_cpu = 0
+            lk_ram = 0
+            lk_hdd = 0
             additional_lk_count = 0
             additional_lk_cpu = 0
             additional_lk_ram = 0
             additional_lk_hdd = 0
-            remove_specific_rows(doc, "Дополнительный сервисный узел Directum RX для «Личный кабинет»")
-    else:
-        lk_count = 0
-        lk_cpu = 0
-        lk_ram = 0
-        lk_hdd = 0
-        additional_lk_count = 0
-        additional_lk_cpu = 0
-        additional_lk_ram = 0
-        additional_lk_hdd = 0
-        delete_paragraphs_by_text(doc, "«Личный кабинет» - решение позволяет")
-        delete_paragraphs_by_text(doc, "Архитектура платформы личного кабинета")
-        delete_paragraphs_by_text(doc, "Сервер приложения личного кабинета")
-        delete_paragraphs_by_text(doc, "Сайт личного кабинета (EssSite)")
-        delete_paragraphs_by_text(doc, "Сервис идентификации (IdentityService)")
-        delete_paragraphs_by_text(doc, "Cервис подписания (SignService)")
-        delete_paragraphs_by_text(doc, "Сервис документов (DocumentService)")
-        delete_paragraphs_by_text(doc, "Сервис сообщений (MessageBroker)")
-        delete_paragraphs_by_text(doc, "Cервис предпросмотра (PreviewService)")
-        delete_paragraphs_by_text(doc, "Сервис хранения файлов предпросмотра (PreviewStorage)")
-        delete_paragraphs_by_text(doc, "Сервис хранения BLOB-объектов (BlobStorageService)")
-        delete_paragraphs_by_text(doc, "Сервер размещения контента (ContentServer)")
-        delete_paragraphs_by_text(doc, "Сервер сеансов (SessionServer)")
-        remove_specific_rows(doc, "Узлы решения «Личный кабинет»", 6)
-        remove_specific_rows(doc, "Узел сервисов решения «Личный кабинет»", 6)
-        remove_specific_rows(doc, "HR Pro (личный кабинет)", 1)
-        remove_specific_rows(doc, "Дополнительный сервисный узел Directum RX для «Личный кабинет»", 6)
-        layers_to_toggle.append("HRPRO")
-
+            layers_to_toggle.append("HRPRO")
+        return{
+            "lk_count": lk_count,
+            "lk_cpu": lk_cpu,
+            "lk_ram": lk_ram,
+            "lk_hdd": lk_hdd,
+            "additional_lk_count": additional_lk_count,
+            "additional_lk_cpu": additional_lk_cpu,
+            "additional_lk_ram": additional_lk_ram,
+            "additional_lk_hdd": additional_lk_hdd
+        }
+    lkcalcultions = calculation_lk(lk_users, redundancy, concurrent_users)
+    lk_count = lkcalcultions["lk_count"]
+    lk_cpu = lkcalcultions["lk_cpu"]
+    lk_ram = lkcalcultions["lk_ram"]
+    lk_hdd = lkcalcultions["lk_hdd"]
+    additional_lk_count = lkcalcultions["additional_lk_count"]
+    additional_lk_cpu = lkcalcultions["additional_lk_cpu"]
+    additional_lk_ram = lkcalcultions["additional_lk_ram"]
+    additional_lk_hdd = lkcalcultions["additional_lk_hdd"]
+        
     #Узел S3 Tool
     if float(version) >= 4.11:
         if s3storage.lower() == "false":
-            remove_specific_rows(doc, "Узел переноса данных в объектные хранилища S3", 6)
-            delete_paragraphs_by_text(doc, "Объектное S3 хранилище")
-            delete_paragraphs_by_text(doc, "Узел переноса данных в объектные хранилища S3")
             s3storage_cpu = 0
             s3storage_ram = 0
             s3storage_count = 0
@@ -713,15 +756,11 @@ def upload_xml():
             s3storage_ram = 4
             s3storage_count = 1
 
-    #Расчет хранилищ
+    #=======================================================Расчеты сайзинга хранилищ============================================================#
     #Исторические данные
-    importhistorydata_size = round(importhistorydata * midsizedoc /1024 / 1024, 0)
-    if importhistorydata_size == 0:
-        remove_specific_rows(doc, "Исторические данные, объем в ГБ", 0)
-    else:
-        pass
+    importhistorydata_size = round(importhistorydata * midsizedoc /1024 / 1024)
     #Годовой прирост документов
-    annualdatagrowth_size = round(annualdatagrowth * midsizedoc / 1024 / 1024, 0)
+    annualdatagrowth_size = round(annualdatagrowth * midsizedoc / 1024 / 1024)
     #Объем основого хранилища тел документов
     main_storage_doc = round((annualdatagrowth_size * 6) + importhistorydata_size, 0)
     #Объем резервного хранилища
@@ -739,7 +778,7 @@ def upload_xml():
                 main_storage_db = 100
             else:
                 main_storage_db  
-        main_storage_db = round(main_storage_db, 0)
+        main_storage_db = int(main_storage_db)
     else:
         main_storage_db = 0
     #Объем резервного хранилища БД
@@ -749,9 +788,24 @@ def upload_xml():
         reserve_storage_db = main_storage_db*8
     #Разделы высокоскоростных данных (разделы ВМ под ОС, разделы БД)
     highspeed_storage = (
-        main_storage_db + webserver_hdd + ms_hdd + reverseproxy_hdd + nomad_hdd + rrm_hdd + onlineeditor_hdd + monitoring_hdd + logstash_hdd + ario_hdd + dtes_hdd
-        +  elasticsearch_hdd + lk_hdd + additional_lk_hdd
-        )
+        int(main_storage_db)
+        +int(webserver_count*webserver_hdd)
+        +int(ms_count*ms_hdd)
+        +int(k8s_count*k8s_hdd)
+        +int(nomad_count*nomad_hdd)
+        +int(reverseproxy_count*reverseproxy_hdd)
+        +int(sql_count*100)
+        +int(dcs_count*dcs_hdd)
+        +int(elasticsearch_count*elasticsearch_hdd)
+        +int(monitoring_count*monitoring_hdd)
+        +int(ario_count*ario_hdd)
+        +int(dtes_count*dtes_hdd)
+        +int(onlineeditor_count*onlineeditor_hdd)
+        +int(lk_count*lk_hdd)
+        +int(additional_lk_count*additional_lk_hdd)
+        +int(rrm_count*rrm_hdd)
+        +int(logstash_count*logstash_hdd)
+    )
     #Разделы индексов полнотекстового поиска
     def calculate_serachindex_size(elasticsearch, redundancy, database, main_storage_doc, main_storage_db):
         if elasticsearch.lower() != "false":
@@ -771,37 +825,14 @@ def upload_xml():
     #Разделы низконагруженных данных (резервное хранение/копирование)
     lowspeed_storage = (reserve_storage_db + reserve_storage_doc)
 
-
-    #Функция для замены текста в шаблоне
-    def replace_placeholder(doc, placeholder, value):
-        # Обработка параграфов
-        for paragraph in doc.paragraphs:
-            if placeholder in paragraph.text:
-                # Объединение всех runs в одном тексте
-                inline = paragraph.runs
-                full_text = ''.join([run.text for run in inline])
-                if placeholder in full_text:
-                    new_text = full_text.replace(placeholder, value)
-                    # Очистка существующих runs
-                    for run in inline:
-                        run.text = ''
-                    # Добавление нового текста в первый run
-                    inline[0].text = new_text
-
-        # Обработка таблиц
-        for table in doc.tables:
-            for row in table.rows:
-                for cell in row.cells:
-                    replace_placeholder(cell, placeholder, value)
-
-    # Заменяем необходимые поля
+#=======================================================Вызываем функцию замены плейсхолдеров в word на значения переменных============================================================#
     replacements = {
         # Блок с общей информацией 
         "CompanyName": str(organization),
         "CurrentDate": str(current_date),
         "UsersPeak": str(concurrent_users),
         "TotalUsers": str(registeredUsers),
-        "ImportPeriod": str(dcsdochours),
+        "ImportPeriod": str("До 250" if dcsdochours < 250 else dcsdochours),
         "ExtIntegration": str(integrationsystems),
         # Условия фнукционирования
         "OSTypeSQL": str(operationsystem),
@@ -859,7 +890,7 @@ def upload_xml():
         "LOGSTASHRAM": str(logstash_ram),
         "LOGSTASHHDD": str(logstash_hdd),
         #Интеграция с онлайн редакторами
-        "ONLINEEDITORCOUN": str(onlineeditor_count),
+        "ONLINEEDITORCOUNT": str(onlineeditor_count),
         "ONLINEEDITORCPU": str(onlineeditor_cpu),
         "ONLINEEDITORRAM": str(onlineeditor_ram),
         "ONLINEEDITORHDD": str(onlineeditor_hdd),
@@ -882,10 +913,10 @@ def upload_xml():
         "LKCPU": str(lk_cpu),
         "LKRAM": str(lk_ram),
         "LKHDD": str(lk_hdd),
-        "ADDLKCOUNT": str(additional_lk_count),
-        "ADDLKCPU": str(additional_lk_cpu),
-        "ADDLKRAM": str(additional_lk_ram),
-        "ADDLKHDD": str(additional_lk_hdd),
+        "ADDRXNODECOUNT": str(additional_lk_count),
+        "ADDRXNODECPU": str(additional_lk_cpu),
+        "ADDRXNODERAM": str(additional_lk_ram),
+        "ADDRXNODEHDD": str(additional_lk_hdd),
         #S3 Tool
         "S3CPU": str(s3storage_cpu),
         "S3RAM": str(s3storage_ram),
@@ -893,30 +924,198 @@ def upload_xml():
         #Сумма ресурсов
         "UnitsCPU": str((webserver_count*webserver_cpu)+(ms_count*ms_cpu)+(k8s_count*k8s_cpu)+(nomad_count*nomad_cpu)+(reverseproxy_count*reverseproxy_cpu)+(sql_count*sql_cpu)
             +(dcs_count*dcs_cpu)+(elasticsearch_count*elasticsearch_cpu)+(monitoring_count*monitoring_cpu)+(ario_count*ario_cpu)+(dtes_count*dtes_cpu)
-            +(onlineeditor_count*onlineeditor_cpu)+(lk_count*lk_cpu)+(additional_lk_count*additional_lk_cpu)+(s3storage_count*s3storage_cpu)
+            +(onlineeditor_count*onlineeditor_cpu)+(lkcalcultions["lk_count"]*lkcalcultions["lk_cpu"])
+            +(lkcalcultions["additional_lk_count"]*lkcalcultions["additional_lk_cpu"])
+            +(s3storage_count*s3storage_cpu)
+            +(rrm_count*rrm_cpu)+(logstash_count*logstash_cpu)
             ), 
         "UnitsRAM": str((webserver_count*webserver_ram)+(ms_count*ms_ram)+(k8s_count*k8s_ram)+(nomad_count*nomad_ram)+(reverseproxy_count*reverseproxy_ram)+(sql_count*sql_ram)
             +(dcs_count*dcs_ram)+(elasticsearch_count*elasticsearch_ram)+(monitoring_count*monitoring_ram)+(ario_count*ario_ram)+(dtes_count*dtes_ram)
-            +(onlineeditor_count*onlineeditor_ram)+(lk_count*lk_ram)+(additional_lk_count*additional_lk_ram)+(s3storage_count*s3storage_ram)
+            +(onlineeditor_count*onlineeditor_ram)
+            +(lk_count*lk_ram)+(additional_lk_count*additional_lk_ram)
+            +(s3storage_count*s3storage_ram)
+            +(rrm_count*rrm_ram)+(logstash_count*logstash_ram)
             ),
         # Прирост и миграция
         "ImportDataSize": str(round(importhistorydata_size / 1024, 1)) + " ТБ" if importhistorydata_size >= 1000 else str(importhistorydata_size) + " ГБ",
         "YearlyDataSize": str(round(annualdatagrowth_size / 1024, 1)) + " ТБ" if annualdatagrowth_size >= 1000 else str(annualdatagrowth_size) + " ГБ",
         "SQLStorageSize": str(round(main_storage_db / 1024, 1)) + " ТБ" if main_storage_db >= 1000 else str(main_storage_db) + " ГБ",
         "SQLResStorageSize": str(round(reserve_storage_db / 1024, 1)) + " ТБ" if reserve_storage_db >= 1000 else str(reserve_storage_db) + " ГБ",
-        "FastStorageSize": str(round(highspeed_storage / 1024, 1)) + " ТБ" if highspeed_storage >=1000 else str(highspeed_storage) + " ГБ",
-        "SearchIndexSize": str(round(elasticsearch_serachindex_size / 1024, 1)) + " ТБ" if elasticsearch_serachindex_size >= 1000 else str(elasticsearch_serachindex_size) + " ГБ", 
+        "FastStorageSize": str(round(highspeed_storage / 1024, 1)) + " ТБ" if highspeed_storage >= 1000 else str(highspeed_storage) + " ГБ",
+        "SearchIndexSize": str(round(elasticsearch_serachindex_size / 1024, 1)) + " ТБ" if int(elasticsearch_serachindex_size) >= 1000 else str(elasticsearch_serachindex_size) + " ГБ", 
         "MidStorageSize": str(round(main_storage_doc / 1024, 1)) + " ТБ" if main_storage_doc >= 1000 else str(main_storage_doc) + " ГБ",
         "ServiceDBStorageSize": str(round(service_db_size / 1024, 1)) + " ТБ" if service_db_size >= 1000 else str(service_db_size) + " ГБ",
         "SlowStorageSize": str(round(lowspeed_storage / 1024, 1)) + " ТБ" if lowspeed_storage >= 1000 else str(lowspeed_storage) + " ГБ",
         "FStorageSize": str(round(main_storage_doc / 1024, 1)) + " ТБ" if main_storage_doc >= 1000 else str(main_storage_doc) + " ГБ",
         "FResStorageSize": str(round(reserve_storage_doc / 1024, 1)) + " ТБ" if reserve_storage_doc >= 1000 else str(reserve_storage_doc) + " ГБ",
     }
-
     for placeholder, value in replacements.items():
         replace_placeholder(doc, placeholder, value)
+    #=======================================================Удаляем таблицы и строки в зависимости от условий ==================================================#
+    #Удаляем текста по сервисам
+    def delete_unnecessary_information(
+            kubernetes, 
+            k8s_count, 
+            ms_count, 
+            nomad_count, 
+            reverseproxy_count, 
+            dcs_count, 
+            elasticsearch_count, 
+            rrm_count, 
+            s3storage_count, 
+            ario_count, 
+            dtes_count, 
+            monitoring_count,
+            logstash_count,
+            lk_count,
+            additional_lk_count,
+            redundancy
+            ):
+        if kubernetes.lower() == "false":
+            if k8s_count == 0:
+                remove_specific_rows(doc, "Узел администрирования Kubernetes", 6)
+                remove_specific_rows(doc, "Kubernetes API server", 7)
+                delete_paragraphs_by_text(doc, "Узел администрирования Kubernetes")
+                delete_paragraphs_by_text(doc, "На узле генерируется конфигурационный файл config.yml и сертификат для проверки токена")       
+            if ms_count == 0:
+                remove_specific_rows(doc, "Узлы микросервисов", 6)
+                delete_paragraphs_by_text(doc, "Узлы микросервисов")
+            if nomad_count == 0:
+                remove_specific_rows(doc, "Узлы сервиса NOMAD", 6)
+                delete_paragraphs_by_text(doc, "Сервис NOMAD (NomadService)")
+            if reverseproxy_count == 0:
+                remove_specific_rows(doc, "Узлы reverse proxy", 6)
+                delete_paragraphs_by_text(doc, "reverse-proxy")
+            if dcs_count == 0:
+                remove_specific_rows(doc, "Узел службы ввода документов", 6)
+                remove_specific_rows(doc, "Периодичность импорта через средство захвата документов, док./час", 0)
+                delete_paragraphs_by_text(doc, "Узлы DCS")
+            if elasticsearch_count == 0:
+                remove_specific_rows(doc, "Узел полнотекстового поиска", 6)
+                remove_specific_rows(doc, "Разделы для индексов полнотекстового поиска", 1)
+                delete_paragraphs_by_text(doc, "Узел полнотекстового поиска – виртуальная машина")
+                delete_paragraphs_by_text(doc, "Хранилище для индексов полнотекстового поиска")
+            if rrm_count == 0:
+                delete_paragraphs_by_text(doc, "Узлы RabbitMQ, etcd+haproxy+keepalived (RMQ + EHK)")
+                remove_specific_rows(doc, "Узлы RabbitMQ, etcd + keepalived + haproxy (для кластера PG)", 6)
+            if s3storage_count == 0:
+                remove_specific_rows(doc, "Узел переноса данных в объектные хранилища S3", 6)
+                delete_paragraphs_by_text(doc, "Объектное S3 хранилище")
+                delete_paragraphs_by_text(doc, "Узел переноса данных в объектные хранилища S3")
+            if ario_count == 0:
+                remove_specific_rows(doc, "Узел сервисов Directum Ario", 6)
+                remove_specific_rows(doc, "Узел сервисов Directum Text Extractor Service", 6)
+                remove_specific_rows(doc, "Сервисы Ario", 0)
+                delete_paragraphs_by_text(doc, "Сервисы Ario")
+                delete_paragraphs_by_text(doc, "** - для сервисов Ario рекомендуется использовать процессоры")
+            if dtes_count == 0:
+                remove_specific_rows(doc, "Узел сервисов Directum Text Extractor Service", 6)
+            if monitoring_count == 0:
+                remove_specific_rows(doc, "Узел решения «Мониторинг системы Directum RX»", 6)
+                delete_paragraphs_by_text(doc, "Узел решения «Мониторинг системы Directum RX»")
+                remove_specific_rows(doc, "Узел Logstash", 6)
+                remove_specific_rows(doc, "Разделы для индексов системы мониторинга", 0)
+                if onlineeditor_count == 0:
+                remove_specific_rows(doc, "Узел решения «Интеграция с онлайн-редакторами OnlyOffice и Р7-Офис»", 6)
+                delete_paragraphs_by_text(doc, "Узел решения «Интеграция с онлайн-редакторами»")
+            if logstash_count == 0:
+                remove_specific_rows(doc, "Узел Logstash", 6)
+            if lk_count == 0:
+                delete_paragraphs_by_text(doc, "«Личный кабинет» - решение позволяет")
+                delete_paragraphs_by_text(doc, "Архитектура платформы личного кабинета")
+                delete_paragraphs_by_text(doc, "Сервер приложения личного кабинета")
+                delete_paragraphs_by_text(doc, "Сайт личного кабинета (EssSite)")
+                delete_paragraphs_by_text(doc, "Сервис идентификации (IdentityService)")
+                delete_paragraphs_by_text(doc, "Cервис подписания (SignService)")
+                delete_paragraphs_by_text(doc, "Сервис документов (DocumentService)")
+                delete_paragraphs_by_text(doc, "Сервис сообщений (MessageBroker)")
+                delete_paragraphs_by_text(doc, "Cервис предпросмотра (PreviewService)")
+                delete_paragraphs_by_text(doc, "Сервис хранения файлов предпросмотра (PreviewStorage)")
+                delete_paragraphs_by_text(doc, "Сервис хранения BLOB-объектов (BlobStorageService)")
+                delete_paragraphs_by_text(doc, "Сервер размещения контента (ContentServer)")
+                delete_paragraphs_by_text(doc, "Сервер сеансов (SessionServer)")
+                remove_specific_rows(doc, "Узлы решения «Личный кабинет»", 6)
+                remove_specific_rows(doc, "Дополнительный сервисный узел Directum RX для «Личный кабинет»", 6)
+                remove_specific_rows(doc, "HR Pro (личный кабинет)", 0)
+            if additional_lk_count == 0:
+                remove_specific_rows(doc, "Дополнительный сервисный узел Directum RX для «Личный кабинет»", 6)
+            if importhistorydata_size == 0:
+                remove_specific_rows(doc, "Исторические данные, объем в ГБ", 0)
+        if kubernetes.lower() == "true":
+            if ms_count == 0:
+                remove_specific_rows(doc, "Поды микросервисов Directum RX", 6)
+                delete_paragraphs_by_text(doc, "Поды микросервисов Directum RX")
+            if nomad_count == 0:
+                remove_specific_rows(doc, "Поды сервиса NOMAD", 6)
+                delete_paragraphs_by_text(doc, "Поды NOMAD (NomadService)")
+            if reverseproxy_count == 0:
+                remove_specific_rows(doc, "Узлы reverse proxy", 6)
+                delete_paragraphs_by_text(doc, "Узлы reverse proxy")
+            if dcs_count == 0:
+                remove_specific_rows(doc, "Поды службы ввода документов", 6)
+                remove_specific_rows(doc, "Периодичность импорта через средство захвата документов, док./час", 0)
+                delete_paragraphs_by_text(doc, "Поды DCS")
+            if elasticsearch_count == 0:
+                remove_specific_rows(doc, "Узел полнотекстового поиска", 6)
+                remove_specific_rows(doc, "Разделы для индексов полнотекстового поиска", 0)
+                delete_paragraphs_by_text(doc, "Узел полнотекстового поиска – виртуальная машина")
+                delete_paragraphs_by_text(doc, "Хранилище для индексов полнотекстового поиска")
+            if rrm_count == 0:
+                delete_paragraphs_by_text(doc, "Узлы RabbitMQ, etcd+haproxy+keepalived (RMQ + EHK)")
+                remove_specific_rows(doc, "Узлы RabbitMQ, etcd + keepalived + haproxy (для кластера PG)", 6)
+            if s3storage_count == 0:
+                remove_specific_rows(doc, "Узел переноса данных в объектные хранилища S3", 6)
+                delete_paragraphs_by_text(doc, "Объектное S3 хранилище")
+                delete_paragraphs_by_text(doc, "Узел переноса данных в объектные хранилища S3")
+            if ario_count == 0:
+                remove_specific_rows(doc, "Поды сервисов Directum Ario", 6)
+                remove_specific_rows(doc, "Поды сервисов Directum Text Extractor Service", 6)
+                remove_specific_rows(doc, "Сервисы Ario", 0)
+                delete_paragraphs_by_text(doc, "Поды с сервисами Ario")
+                delete_paragraphs_by_text(doc, "** - для сервисов Ario рекомендуется использовать процессоры")
+            if dtes_count == 0:
+                remove_specific_rows(doc, "Узел сервисов Directum Text Extractor Service", 6)
+            if onlineeditor_count == 0:
+                remove_specific_rows(doc, "Узел решения «Интеграция с онлайн-редакторами OnlyOffice и Р7-Офис»", 6)
+                delete_paragraphs_by_text(doc, "Узел решения «Интеграция с онлайн-редакторами»")
+            if monitoring_count == 0:
+                remove_specific_rows(doc, "Узел решения «Мониторинг системы Directum RX»", 6)
+                delete_paragraphs_by_text(doc, "Узел решения «Мониторинг системы Directum RX»")
+                remove_specific_rows(doc, "Узел Logstash", 6)
+                remove_specific_rows(doc, "Разделы для индексов системы мониторинга", 0)
+            if logstash_count == 0:
+                remove_specific_rows(doc, "Узел Logstash", 6)
+            if importhistorydata_size == 0:
+                remove_specific_rows(doc, "Исторические данные, объем в ГБ", 0)
+        if redundancy.lower() == "false":
+            delete_paragraphs_by_text(doc, "Представленная инсталляция работает в режиме распределения нагрузки")
+            delete_paragraphs_by_text(doc, "Зеленые блоки")
+            delete_paragraphs_by_text(doc, "Красные блоки ")
+    try:
+        logger.info(f"Не используемая информация в шаблоне удалена")
+        delete_unnecessary_information(
+                    kubernetes, 
+                    k8s_count, 
+                    ms_count, 
+                    nomad_count, 
+                    reverseproxy_count, 
+                    dcs_count, 
+                    elasticsearch_count, 
+                    rrm_count, 
+                    s3storage_count, 
+                    ario_count, 
+                    dtes_count, 
+                    monitoring_count,
+                    onlineeditor_count,
+                    logstash_count,
+                    lk_count,
+                    additional_lk_count,
+                    redundancy
+                    )
+    except:
+        logger.error(f"Ошибко при выполнении функции delete_unnecessary_information")
 
-    # Подготавливаем имя для отчета
+    #=======================================================Подготавливаем имя файла для сохранения ============================================================#
     def sanitize_filename(filename):
         """
         Очищает имя файла, удаляя любые кавычки и подстроку "ООО".
@@ -945,11 +1144,11 @@ def upload_xml():
         sanitized_filename = f"{name}{ext}"    
         return sanitized_filename
 
-    temp_report_filename = f"{organization}_{current_date}.docx"
+    temp_report_filename = f"Рекомендации_по_характеристикам_серверов_{organization}_{current_date}.docx"
     report_filename = sanitize_filename(temp_report_filename)
     report_path = os.path.join(app.config['REPORT_FOLDER'], report_filename)
 
-#===================================Функции для вставки схемы ===========================================================================#
+#=======================================================Функции работы со схемами DrawIO============================================================#
     def load_drawio_file_lxml(file_path: str) -> etree._ElementTree:
         try:
             parser = etree.XMLParser(remove_comments=False)
@@ -1002,7 +1201,7 @@ def upload_xml():
             raise
         
         # Указание пути к исполняемому файлу drawio-exporter
-        drawio_exporter_executable = r"drawio"  # Обновите путь, если необходимо
+        drawio_exporter_executable = r"C:\Program Files\draw.io\draw.io.exe"  # Обновите путь, если необходимо
         
         # Проверка наличия исполняемого файла в PATH или по указанному пути
         if not shutil.which(drawio_exporter_executable):
@@ -1014,7 +1213,6 @@ def upload_xml():
             '-o', png_output_path,
             '-f', 'png',
             '-b', '5',
-            '--no-sandbox'
         ]
         
         logging.debug(f"Выполнение команды: {' '.join(command)}")
@@ -1041,19 +1239,6 @@ def upload_xml():
             logging.error(f"Не удалось удалить временный файл {temp_drawio_path}: {e}")
         
         return png_output_path
-
-
-    # Настройка логирования
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler("replace_placeholder.log", encoding='utf-8'),
-            logging.StreamHandler()
-        ]
-    )
-
-    logger = logging.getLogger(__name__)
 
     def replace_placeholder_with_image(placeholder, image_path, width_inches=None):
         """
@@ -1112,56 +1297,58 @@ def upload_xml():
         # Шаг 1: Загрузка и парсинг файла
         tree = load_drawio_file_lxml(scheme_template)
 
-        # Шаг 2: Поиск слоёв
-        layers = find_layers(tree, layers_to_toggle)
-        if not layers:
-            print("Слои не найдены по заданным названиям.")
-            return
-        else:
-            print(f"Найдено {len(layers)} слоев.")
+        if layers_to_toggle:
+            # Шаг 2: Поиск слоёв
+            layers = find_layers(tree, layers_to_toggle)
 
-        # Шаг 3: Изменение видимости слоёв
-        toggle_layer_visibility(tree, layers, visibility)
+            # Шаг 3: Изменение видимости слоёв
+            toggle_layer_visibility(tree, layers, visibility)
+        else:
+            pass
         # Шаг 4: Сохранение файла
         saved_file = save_drawio_as_png(tree, scheme_template)
         return saved_file        
     
-    #Условия для выборки схем
+    #Указываем место хранение схем
     TEMPLATE_SCHEMES = r'schemes_template'
     app.config['TEMPLATE_SCHEMES'] = TEMPLATE_SCHEMES
-    if redundancy.lower() == "true" and operationsystem.lower() == "linux" and kubernetes.lower() == "false" and lk_users == 0:
-        scheme_template = os.path.join(app.config['TEMPLATE_SCHEMES'], 'ha.drawio')
-    elif redundancy.lower() == "false" and operationsystem.lower() == "linux" and kubernetes.lower() == "false" and lk_users == 0:
-        scheme_template = os.path.join(app.config['TEMPLATE_SCHEMES'], 'standalone.drawio')
-        delete_paragraphs_by_text(doc, "Зеленые блоки – запущенные сервисы в данный момент.")
-        delete_paragraphs_by_text(doc, "Красные блоки – резервные узлы, активирующиеся автоматически в случае отказа основных.")
-        delete_paragraphs_by_text(doc, "Представленная инсталляция работает в режиме распределения нагрузки серверов приложений за счет использования фермы серверов приложений. Для балансировки нагрузки и отказоустойчивости Directum RX в зависимости от операционной системы необходимо развернуть сервер реверс-прокси. Далее в рекомендациях используется HAProxy.")
-    elif redundancy.lower() == "true" and operationsystem.lower() == "windows" and kubernetes.lower() == "false" and lk_users == 0:
-        scheme_template = os.path.join(app.config['TEMPLATE_SCHEMES'], 'ha-ms.drawio')
-    elif redundancy.lower() == "false" and operationsystem.lower() == "windows" and kubernetes.lower() == "false" and lk_users == 0:
-        scheme_template = os.path.join(app.config['TEMPLATE_SCHEMES'], 'standalone-ms.drawio')
-        delete_paragraphs_by_text(doc, "Зеленые блоки – запущенные сервисы в данный момент.")
-        delete_paragraphs_by_text(doc, "Красные блоки – резервные узлы, активирующиеся автоматически в случае отказа основных.")
-        delete_paragraphs_by_text(doc, "Представленная инсталляция работает в режиме распределения нагрузки серверов приложений за счет использования фермы серверов приложений. Для балансировки нагрузки и отказоустойчивости Directum RX в зависимости от операционной системы необходимо развернуть сервер реверс-прокси. Далее в рекомендациях используется HAProxy.")
-    elif redundancy.lower() == "false" and kubernetes.lower() == "false" and lk_users > 0:
-        scheme_template = os.path.join(app.config['TEMPLATE_SCHEMES'], 'standalone-lk.drawio')
-        delete_paragraphs_by_text(doc, "Зеленые блоки – запущенные сервисы в данный момент.")
-        delete_paragraphs_by_text(doc, "Красные блоки – резервные узлы, активирующиеся автоматически в случае отказа основных.")
-        delete_paragraphs_by_text(doc, "Представленная инсталляция работает в режиме распределения нагрузки серверов приложений за счет использования фермы серверов приложений. Для балансировки нагрузки и отказоустойчивости Directum RX в зависимости от операционной системы необходимо развернуть сервер реверс-прокси. Далее в рекомендациях используется HAProxy.")
-    elif redundancy.lower() == "true" and kubernetes.lower() == "false" and lk_users > 0:
-        scheme_template = os.path.join(app.config['TEMPLATE_SCHEMES'], 'ha-hrpro.drawio')
-    elif kubernetes.lower == "true":
-        scheme_template = os.path.join(app.config['TEMPLATE_SCHEMES'], 'k8s.drawio')
-        delete_paragraphs_by_text(doc, "Зеленые блоки – запущенные сервисы в данный момент.")
-        delete_paragraphs_by_text(doc, "Красные блоки – резервные узлы, активирующиеся автоматически в случае отказа основных.")
-        delete_paragraphs_by_text(doc, "Представленная инсталляция работает в режиме распределения нагрузки серверов приложений за счет использования фермы серверов приложений. Для балансировки нагрузки и отказоустойчивости Directum RX в зависимости от операционной системы необходимо развернуть сервер реверс-прокси. Далее в рекомендациях используется HAProxy.")
 
+    #Функция с условиями выбора схемы
+    def select_scheme_template(redundancy, operationsystem, kubernetes, lk_users, concurrent_users) -> str:
+        base_path = app.config['TEMPLATE_SCHEMES']
+        if kubernetes.lower() == "true":
+            return os.path.join(base_path, 'kubernetes.drawio')
+        if operationsystem.lower() == 'linux':
+                if redundancy:
+                    if lk_users > 0:
+                        return os.path.join(base_path, 'ha-hrpro.drawio')
+                    else:
+                        return os.path.join(base_path, 'ha.drawio' if concurrent_users > 499 else 'ha-noms.drawio')
+                else:
+                    if lk_users > 0:
+                        return os.path.join(base_path, 'standalone-lk.drawio')
+                    else:
+                        return os.path.join(base_path, 'standalone.drawio')
+        elif operationsystem.lower() == 'windows':
+            return os.path.join(base_path, 'ha-ms.drawio' if redundancy else 'standalone-ms.drawio')
+    
+    #Вызываем функцию и записываем выбор в переменную
+    scheme_template = select_scheme_template(
+        redundancy,
+        operationsystem,
+        kubernetes,
+        lk_users,
+        concurrent_users
+    )
+    
+    #Вызываем функцию конвертации в PNG
     try:
         saved_scheme = drawing_scheme(redundancy, layers_to_toggle, template_path, scheme_template)
         logger.info(f"Схема успешно сохранена в файле {saved_scheme}.") 
     except ValueError as se:
         logger.error(f"Произошла ошибка: {se}")
-
+    
+    #вызываем функцию вставки схемы в файл
     try:
         replace_placeholder_with_image(
             placeholder="PASTESCHEME",
@@ -1175,11 +1362,17 @@ def upload_xml():
     doc.save(report_path)
 
     # Удаляем загруженный XML файл (опционально)
+    
     os.remove(filepath)
 
     report_link = url_for('download_report', filename=report_filename)
 
-    return render_template('index.html', report_link=report_link)
+    # Логирование информации о запросе
+    try:
+        logger.info(f"Рендеринг шаблона 'index.html' с отчетной ссылкой: {report_link}")
+        return render_template('index.html', report_link=report_link)
+    except:
+        logger.error(f"Ошибка при рендеринге шаблона 'index.html'")
 
 @app.route('/reports/<filename>')
 def download_report(filename):

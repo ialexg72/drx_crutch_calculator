@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Опросная анкета</title>
+    <!-- Подключение Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow">
+                    <div class="card-header text-center">
+                        <svg viewBox="0 0 136 35" fill="none" xmlns="http://www.w3.org/2000/svg" width="350" height="50">
+                            <g clip-path="url(#clip0)">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M15.6928 25.1513C16.5848 27.4544 17.3223 29.3584 17.5741 30.0912C18.2693 32.1137 18.0113 33.4108 17.2247 33.9349C16.0746 34.7012 14.5878 34.2586 12.8478 32.2768C11.6878 31.0027 8.62066 27.0001 6.15565 22.7533C4.41564 19.922 2.66139 16.4636 0.564835 12.2705C-1.19341 7.46505 1.39278 5.94631 5.0178 4.53069C8.93281 2.97351 14.5878 1.41633 17.7778 0.850086C20.0979 0.425401 23.6816 0.0564476 24.4479 1.41633C24.8829 2.2657 24.5515 3.58425 22.4661 4.93255C22.0641 5.17784 21.076 5.78855 19.8779 6.52909C17.6187 7.92543 14.6128 9.78334 13.381 10.5234C11.206 11.7974 11.3005 13.6503 11.8805 15.0659C12.8198 17.7336 14.4149 21.852 15.6928 25.1513ZM24.4524 22.6397C24.9287 23.9113 25.3224 24.9626 25.4569 25.3672C25.647 25.9391 25.6593 26.6558 25.6384 26.804C25.5116 27.7011 24.5568 27.8266 23.8468 27.3976C23.5621 27.2256 23.2591 26.9575 22.9334 26.5738C22.314 25.8704 20.6764 23.6605 19.3602 21.3158C18.4312 19.7526 17.4946 17.8432 16.3751 15.5281C15.4364 12.875 16.8172 12.0364 18.7527 11.2549C20.843 10.3951 23.8624 9.53539 25.5657 9.22276C25.6328 9.21005 25.7014 9.19687 25.7713 9.18345C26.9908 8.94921 28.5869 8.64263 29.127 9.53539C29.4096 10.0027 29.1823 10.7323 28.0688 11.4767C27.8542 11.6122 27.3266 11.9494 26.6869 12.3582C25.4807 13.1291 23.8757 14.1549 23.2181 14.5635C22.0568 15.2669 22.1072 16.2899 22.4169 17.0715C22.9184 18.5444 23.7701 20.8182 24.4524 22.6397Z" fill="#FF8600"/>
+                            <g clip-path="url(#clip1)">
+                            <path d="M43.3021 26.0051C48.8065 26.0051 51.9851 22.6156 51.9851 16.992C51.9851 11.4455 48.8065 8.05591 43.4572 8.05591H37.2791V26.0051H43.3021ZM39.9925 23.6171V10.444H43.3021C47.256 10.444 49.2717 12.7551 49.2717 16.992C49.2717 21.229 47.256 23.6171 43.1471 23.6171H39.9925Z" fill="#010202"/>
+                            <path d="M54.3792 26.0051H57.0709V12.198H55.725H54.3792V26.0051ZM55.8042 10.5679C56.7542 10.5679 57.4667 9.86489 57.4667 9.00573C57.4667 8.14656 56.675 7.4436 55.8042 7.4436C54.8542 7.4436 54.1417 8.14656 54.1417 9.00573C54.0625 9.78679 54.8542 10.5679 55.8042 10.5679Z" fill="#010202"/>
+                            <path d="M59.3705 26.0228H62.0622V17.6654C62.0622 15.869 63.4872 14.6193 65.3872 14.6193C65.9414 14.6193 66.5747 14.6974 66.8122 14.7755V12.2761C66.5747 12.2761 66.0205 12.198 65.7039 12.198C64.1205 12.198 62.6955 13.1353 62.2205 14.5412H62.0622V12.3542H59.3705V26.0228Z" fill="#010202"/>
+                            <path d="M73.5354 26.2571C76.5437 26.2571 78.6812 24.7731 79.3145 22.5861L76.7812 22.1175C76.3062 23.3672 75.1187 24.0701 73.6145 24.0701C71.3187 24.0701 69.7354 22.5861 69.6562 20.0086H79.4729V19.0713C79.4729 14.1507 76.4645 12.198 73.377 12.198C69.4979 12.198 66.9645 15.0879 66.9645 19.3057C66.9645 23.4453 69.4979 26.2571 73.5354 26.2571ZM69.6562 17.9779C69.7354 16.0252 71.1604 14.385 73.377 14.385C75.4354 14.385 76.8604 15.9471 76.8604 17.9779H69.6562Z" fill="#010202"/>
+                            <path d="M87.186 26.3352C90.4319 26.3352 92.5694 24.3826 92.886 21.727H90.2735C89.9569 23.211 88.7694 24.0701 87.2652 24.0701C84.9694 24.0701 83.5444 22.1956 83.5444 19.2276C83.5444 16.3376 85.0485 14.4631 87.2652 14.4631C89.0069 14.4631 90.036 15.5566 90.2735 16.8063H92.886C92.5694 14.0725 90.3527 12.198 87.186 12.198C83.3069 12.198 80.7735 15.0879 80.7735 19.2276C80.6944 23.3672 83.1485 26.3352 87.186 26.3352Z" fill="#010202"/>
+                            <path d="M101.167 12.5986H98.3166V9.39624H95.625V12.6767H93.5667V14.7856H95.625V22.6443C95.625 25.1437 97.525 26.3153 99.6625 26.2372C100.533 26.2372 101.087 26.081 101.404 25.9247L100.929 23.7378C100.771 23.7378 100.454 23.8159 99.9791 23.8159C99.1083 23.8159 98.3166 23.5034 98.3166 22.0194V14.7856H101.167V12.5986Z" fill="#010202"/>
+                            <path d="M109.004 23.8181C107.342 23.8181 106.154 22.6465 106.154 20.7719V12.3365H103.462V21.0062C103.462 24.3648 105.362 26.1612 107.975 26.1612C110.033 26.1612 111.458 25.0678 112.092 23.6618H112.25V26.005H114.862V12.3365H112.171V20.3814C112.171 21.6796 110.795 23.8181 109.004 23.8181Z" fill="#010202"/>
+                            <path d="M117.158 26.0228H119.85V17.5873C119.85 15.7128 121.117 14.4631 122.7 14.4631C124.204 14.4631 125.233 15.4004 125.233 16.8844V26.0228H127.925V17.353C127.925 15.7128 128.954 14.5412 130.696 14.5412C132.121 14.5412 133.308 15.3222 133.308 17.1968V26.0228H136V16.8844C136 13.7601 134.258 12.198 131.725 12.198C129.746 12.198 128.242 13.1353 127.608 14.6193H127.45C126.817 13.1353 125.55 12.198 123.729 12.198C121.908 12.198 120.562 13.0572 119.929 14.6193H119.771V12.3542H117.158V26.0228Z" fill="#010202"/>
+                            </g>
+                            </g>
+                            <defs>
+                            <clipPath id="clip0">
+                            <rect width="136" height="33.8274" fill="white" transform="translate(0 0.461914)"/>
+                            </clipPath>
+                            <clipPath id="clip1">
+                            <rect width="98.7208" height="19.3299" fill="white" transform="translate(37.2791 7.36548)"/>
+                            </clipPath>
+                            </defs>
+                        </svg>
+                    </div>
+                    <div class="card-body">
+                        <form id="surveyForm">
+                            <!-- Раздел Общая информация -->
+                            <fieldset class="mb-4">
+                                <legend class="h5">Общая информация</legend>
+                                <div class="mb-3">
+                                    <label for="organization" class="form-label">Наименование организации:</label>
+                                    <input type="text" class="form-control" id="organization" name="organization" title="Введите наименование вашей организации" required>
+                                </div>
+                                <!-- Добавление выпадающего списка "Выбор версии" -->
+                                <div class="mb-3">
+                                    <label for="version" class="form-label">Выбор версии:</label>
+                                    <select class="form-select" id="version" name="version" required>
+                                        <option value="" disabled selected>-- Выберите версию --</option>
+                                        <option value="4.11">4.11</option>
+                                        <option value="4.10">4.10</option>
+                                    </select>
+                                </div>
+                            </fieldset>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="kubernetes" name="kubernetes">
+                                    <label class="form-check-label" for="kubernetes">
+                                        Kubernetes
+                                    <span class="ms-2 text-primary" data-bs-toggle="tooltip" data-bs-placement="right" title="Kubernetes (K8s) — это открытое программное обеспечение для оркестровки контейнеризированных приложений — автоматизации их развёртывания, масштабирования и координации в условиях кластера.">
+                                    <i class="bi bi-exclamation-circle"></i>
+                                    </span>
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="s3storage" name="s3storage">
+                                    <label class="form-check-label" for="s3storage">
+                                        S3 хранилище
+                                    <span class="ms-2 text-primary" data-bs-toggle="tooltip" data-bs-placement="right" title="Доступно с версии Directum RX 4.11. Для интеграции с S3 хранилищами будет добавлен узел с утилитой S3 Tool">
+                                    <i class="bi bi-exclamation-circle"></i>
+                                    </span>
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="redundancy" name="redundancy">
+                                    <label class="form-check-label" for="redundancy">
+                                        Отказоустойчивость
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="monitoring" name="monitoring">
+                                    <label class="form-check-label" for="monitoring">
+                                        Необходимость мониторинга
+                                    </label>
+                                </div>
+
+                                <div class="mb-3">
+                                    <span class="form-label d-block">Выбор серверной операционной системы:</span>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" id="linux" name="ostype" value="Linux" required>
+                                        <label class="form-check-label" for="Linux">Linux</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" id="windows" name="ostype" value="Windows" required>
+                                        <label class="form-check-label" for="Windows">Windows</label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <span class="form-label d-block">ПО для СУБД:</span>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" id="postgres" name="database" value="Postgres" required>
+                                        <label class="form-check-label" for="postgres">Postgres</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" id="mssql" name="database" value="Microsoft SQL" required>
+                                        <label class="form-check-label" for="mssql">Microsoft SQL</label>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <!-- Раздел Активность пользователей -->
+                            <fieldset class="mb-4">
+
+                                <legend class="h5">Активность пользователей</legend>
+                                
+                                <div class="mb-3">
+                                    <label for="registeredUsers" class="form-label">Количество зарегистрированных пользователей в системе:</label>
+                                    <input type="number" class="form-control" id="registeredUsers" name="registeredUsers" title="Введите количество зарегистрированных пользователей" min="0" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="peakLoad" class="form-label">Пиковая нагрузка на систему:</label>
+                                    <input type="number" class="form-control" id="peakLoad" name="peakLoad" title="Введите пиковую нагрузку на систему" min="0" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="peakPeriod" class="form-label">Период высокой пиковой нагрузки:</label>
+                                    <input type="text" class="form-control" id="peakPeriod" name="peakPeriod" title="Опишите период высокой пиковой нагрузки" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="concurrentUsers" class="form-label">Ожидаемое количество одновременных пользователей через 5 лет:</label>
+                                    <input type="number" class="form-control" id="concurrentUsers" name="concurrentUsers" title="Введите ожидаемое количество одновременных пользователей" min="0" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="lkusers" class="form-label">Кол-во пользователей личного кабинета HR PRO:</label>
+                                    <input type="text" class="form-control" id="lkusers" name="lkusers" title="Опишите период высокой пиковой нагрузки" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="mobileappusers" class="form-label">Кол-во пользователей мобильных приложений:</label>
+                                    <input type="text" class="form-control" id="mobileappusers" name="mobileappusers" title="Опишите период высокой пиковой нагрузки" required>
+                                </div>
+                            </fieldset>
+                            <!-- Прирост данных -->
+                            <fieldset class="mb-4">
+                                <legend class="h5">Прирост данных</legend>
+                                <div class="mb-3">
+                                    <label for="importhistorydata" class="form-label">Импорт исторических данных (штук):</label>
+                                    <input type="number" class="form-control" id="importhistorydata" name="importhistorydata" title="Введите количество зарегистрированных пользователей" min="0" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="annualdatagrowth" class="form-label">Ежегодный прирост данных (штук/год):</label>
+                                    <input type="number" class="form-control" id="annualdatagrowth" name="annualdatagrowth" title="Введите количество зарегистрированных пользователей" min="0" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="midsizedoc" class="form-label">Средний размер одного документа (KB):</label>
+                                    <input type="number" class="form-control" id="midsizedoc" name="midsizedoc" title="Введите количество зарегистрированных пользователей" min="0" required>
+                                </div>
+                            </fieldset>
+                            <!-- Импорт данных в систему -->
+                            <fieldset class="mb-4">
+                                <legend class="h5">Регулярный импорт данных в систему</legend>
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="dcs" name="dcs">
+                                        <label class="form-check-label" for="dcs">Необходимость DCS
+                                            <span class="ms-2 text-primary" data-bs-toggle="tooltip" data-bs-placement="right" title="Служба ввода документов (DCS) организует автоматическую отправку документов, полученных из файловой системы и электронной почты, в систему Directum RX или произвольную систему.">
+                                            <i class="bi bi-exclamation-circle"></i>
+                                            </span>
+                                        </label>
+                                        
+                                    </div>
+                                <div class="mb-3">
+                                    <label for="dcsdochours" class="form-label">Кол-во документов в час:</label>
+                                    <input type="number" class="form-control" id="dcsdochours" name="dcsdochours" title="Введите предполагаемое количество документов вводимы через службу DCS в час." min="0" required>
+                                </div>
+                            </fieldset>
+                            
+                            <!-- Интеграция -->
+                            <fieldset class="mb-4">
+                                <legend class="h5">Интеграция</legend>
+                                <div class="mb-3">
+                                    <label for="onlineeditor" class="form-label">Интеграция с онлайн редакторами:</label>
+                                    <select class="form-select" id="onlineeditor" name="onlineeditor" required>
+                                        <option value="" disabled selected>-- Выберите версию --</option>
+                                        <option value="None">Нет</option>
+                                        <option value="OnlyOffice">OnlyOffice</option>
+                                        <option value="R7Office">R7 Office</option>
+                                    </select>
+                                </div>
+                                <div id="additionalSection" class="mt-3 hidden-section">
+                                    <label for="integrationsystems" class="form-label">Интеграция с внешними системами:</label>
+                                    <textarea class="form-control" id="integrationsystems" name="integrationsystems" rows="5" placeholder="Перечислите системы с которыми планируется интеграция ..."></textarea>
+                                </div>
+                            </fieldset>
+
+                            <!-- Блок "Поиск и обработка данных"  -->
+                            <fieldset class="mb-4">
+                                <legend class="h5">Поиск и обработка данных</legend>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="elasticsearch" name="elasticsearch">
+                                    <label class="form-check-label" for="elasticsearch">Полнотекстовый поиск</label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="ario" name="ario">
+                                    <label class="form-check-label" for="ario">Сервисы Ario</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="ariodocin" class="form-label">Кол-во документов в месяц:</label>
+                                    <input type="number" class="form-control" id="ariodocin" name="ariodocin" title="Введите предполагаемое объем документов который будет обрабатываться сервисами Ario ..." min="0" required>
+                                </div>    
+                            </fieldset>
+                            <!-- Подвал -->
+                            <div class="d-flex justify-content-between">
+                                <button type="submit" class="btn btn-primary">Сохранить</button>
+                                <button type="button" id="calculateBtn" class="btn btn-secondary">Выполнить расчет</button>
+                                <button type="button" id="clearButton" class="btn btn-danger ml-2">Очистить</button>
+                            </div>
+                            {% if report_link %}
+                            <div class="alert alert-success mt-4 d-flex justify-content-between align-items-center" role="alert">
+                                <span>Расчет готов:</span>
+                                <a href="{{ report_link }}" download class="alert-link">Скачать расчет</a>
+                            </div>
+                            <div class="alert alert-warning mt-4 d-flex justify-content-between align-items-center" role="alert">
+                                <span>Не забудьте обновить оглавление!!! Python на Linux этого пока делать не умеет :(</span>
+                            </div>
+                            {% endif %}
+                        </form>
+                    </div>
+                    <div class="card-footer text-muted text-center">
+                        &copy; 2024 | ООО "Директум"
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключение Bootstrap JS и зависимостей -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Подключение собственного JS -->
+    <script>
+    // Инициализация всех тултипов на странице
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+    </script>     
+    <script>
+        // Функция для обновления состояния опций СУБД
+        function updateDatabaseOptions() {
+            // Получаем выбранную ОС
+            const selectedOS = document.querySelector('input[name="ostype"]:checked');
+            const selectedOSValue = selectedOS ? selectedOS.value : null;
+
+            // Получаем элементы радио кнопок СУБД
+            const postgresRadio = document.getElementById('postgres');
+            const mssqlRadio = document.getElementById('mssql');
+
+            if (selectedOSValue === 'Linux') {
+                // Если выбрана Linux:
+                mssqlRadio.disabled = true;
+                postgresRadio.disabled = false;
+                if (!postgresRadio.checked) {
+                    postgresRadio.checked = true;
+                }
+            } else if (selectedOSValue === 'Windows') {
+                // Если выбрана Windows:
+                postgresRadio.disabled = true;
+                mssqlRadio.disabled = false;
+                if (!mssqlRadio.checked) {
+                    mssqlRadio.checked = true;
+                }
+            } else {
+                // Если ОС не выбрана:
+                postgresRadio.disabled = false;
+                mssqlRadio.disabled = false;
+            }
+        }
+        function updateArioOptions() {
+        const selectedOS = document.querySelector('input[name="ostype"]:checked');
+        const selectedOSValue = selectedOS ? selectedOS.value : null;   
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            // Получаем все радио кнопки выбора ОС
+            const osRadios = document.querySelectorAll('input[name="ostype"]');
+
+            // Добавляем обработчик события 'change' для каждой радио кнопки
+            osRadios.forEach(function(radio) {
+                radio.addEventListener('change', updateDatabaseOptions);
+            });
+
+            // Вызов функции при загрузке, чтобы установить правильное состояние
+            updateDatabaseOptions();
+
+            // Дополнительно: можно добавить сохранение в localStorage, если необходимо
+        });
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('surveyForm');
+    const clearButton = document.getElementById('clearButton');
+    const calculateButton = document.getElementById("calculateBtn");
+
+    // Загрузка данных из localStorage при загрузке страницы
+    loadFormData();
+
+    calculateButton.addEventListener("click", function(event) {
+        event.preventDefault(); // Предотвращаем стандартную отправку формы
+
+        const formData = new FormData(form);
+        const data = {};
+
+        formData.forEach((value, key) => {
+            data[key] = value;
+    });
+    // Сохраняем данные в localStorage
+    localStorage.setItem("questionnaireData", JSON.stringify(data));
+
+    // Отправляем данные на сервер в формате JSON
+    fetch("/submit_questionnaire", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if(result.status === "success") {
+            alert("Данные успешно сохранены и отправлены.");
+        } else {
+            alert("Произошла ошибка: " + result.message);
+        }
+    })
+    .catch(error => {
+        console.error("Ошибка:", error);
+        alert("Произошла ошибка при отправке данных.");
+    });
+    });
+
+    // Обработчик отправки формы
+    form.addEventListener('submit', (e) => {
+        e.preventDefault(); // Предотвращаем отправку формы
+
+        const formData = {
+            //Общая информация
+            organization: document.getElementById('organization').value, //Наименование организации
+            version: document.getElementById('version').value, //Версия RX
+            kubernetes: document.getElementById('kubernetes').checked, //Kubernetes
+            s3storage: document.getElementById('s3storage').checked, //s3 storage
+            redundancy: document.getElementById('redundancy').checked, //Отказоустойчивость
+            monitoring: document.getElementById('monitoring').checked, //Мониторинг
+            ostype: document.querySelector('input[name="ostype"]:checked') ? document.querySelector('input[name="ostype"]:checked').value : '',
+            database: document.querySelector('input[name="database"]:checked') ? document.querySelector('input[name="database"]:checked').value : '',
+            
+            //Активность пользователей
+            registeredUsers: document.getElementById('registeredUsers').value, //Кол-во зарегистрированных пользователей
+            peakLoad: document.getElementById('peakLoad').value, //Пиковая нагрузка на систему
+            peakPeriod: document.getElementById('peakPeriod').value, //Период пиковой нагрузки
+            concurrentUsers: document.getElementById('concurrentUsers').value, //Кол-во одновременных пользователей
+            mobileappusers: document.getElementById('mobileappusers').value, //Кол-во пользователей мобильных приложений
+            lkusers: document.getElementById('lkusers').value,
+
+            //Прирост данных
+            importhistorydata: document.getElementById('importhistorydata').value,
+            annualdatagrowth: document.getElementById('annualdatagrowth').value,
+            midsizedoc: document.getElementById('midsizedoc').value,
+
+            //Импорт данных в систему
+            dcs: document.getElementById('dcs').checked,
+            dcsdochours: document.getElementById('dcsdochours').value,
+
+            //Интеграция
+            onlineeditor: document.getElementById('onlineeditor').value,
+            integrationsystems: document.getElementById('integrationsystems').value,
+
+            //Поиск и обработка данных
+            elasticsearch: document.getElementById('elasticsearch').checked,
+            ario: document.getElementById('ario').checked,
+            ariodocin: document.getElementById('ariodocin').value
+        };
+
+        // Сохранение данных в localStorage в формате JSON
+        localStorage.setItem('surveyData', JSON.stringify(formData));
+
+        // Отображение уведомления с использованием Bootstrap Alerts
+        showAlert('Данные успешно сохранены!', 'success');
+    });
+
+    // Обработчик кнопки экспорта в XML
+    const exportBtn = document.getElementById('exportXml');
+    exportBtn.addEventListener('click', () => {
+        const savedData = localStorage.getItem('surveyData');
+        if (!savedData) {
+            showAlert('Нет данных для экспорта.', 'warning');
+            return;
+        }
+
+        const data = JSON.parse(savedData);
+        const xml = jsonToXML(data);
+
+        // Создание ссылки для скачивания
+        const blob = new Blob([xml], { type: 'application/xml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'surveyData.xml';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        showAlert('Данные успешно экспортированы в XML!', 'success');
+    });
+
+    // Обработчик кнопки очистки
+    clearButton.addEventListener('click', () => {
+        // Удаление данных из localStorage
+        localStorage.removeItem('surveyData');
+
+        // Сброс формы
+        form.reset();
+
+        // Отображение уведомления об очистке
+        showAlert('Данные успешно очищены!', 'warning');
+    });
+
+    // Функция загрузки данных из localStorage
+    function loadFormData() {
+        const savedData = localStorage.getItem('surveyData');
+        if (savedData) {
+            const formData = JSON.parse(savedData);
+
+            document.getElementById('organization').value = formData.organization || '';
+            document.getElementById('kubernetes').checked = formData.redundancy || false;
+            document.getElementById('s3storage').checked = formData.redundancy || false;
+            document.getElementById('redundancy').checked = formData.redundancy || false;
+            document.getElementById('monitoring').checked = formData.monitoring || false;
+
+            if (formData.database) {
+                const dbRadio = document.querySelector(`input[name="database"][value="${formData.database}"]`);
+                if (dbRadio) dbRadio.checked = true;
+            }
+
+            if (formData.version) { // Загрузка выбранной версии
+                const versionSelect = document.getElementById('version');
+                versionSelect.value = formData.version;
+            }
+             if (formData.ostype) {
+                const dbRadio = document.querySelector(`input[name="ostype"][value="${formData.ostype}"]`);
+                if (dbRadio) dbRadio.checked = true;
+            }
+
+            document.getElementById('registeredUsers').value = formData.registeredUsers || '';
+            document.getElementById('peakLoad').value = formData.peakLoad || '';
+            document.getElementById('peakPeriod').value = formData.peakPeriod || '';
+            document.getElementById('concurrentUsers').value = formData.concurrentUsers || '';
+            document.getElementById('lkusers').value = formData.lkusers || '';
+            document.getElementById('mobileappusers').value = formData.mobileappusers || '';
+
+            //Прирост данных
+            document.getElementById('importhistorydata').value = formData.importhistorydata || '';
+            document.getElementById('annualdatagrowth').value = formData.annualdatagrowth || '';
+            document.getElementById('midsizedoc').value = formData.midsizedoc || '';
+
+            //Импорт данных в систему
+            document.getElementById('dcs').checked = formData.dcs || false;
+            document.getElementById('dcsdochours').value = formData.dcsdochours || '';
+
+            //Интеграция
+            document.getElementById('onlineeditor').value = formData.onlineeditor || '';
+            document.getElementById('integrationsystems').value = formData.integrationsystems || '';
+
+            //Поиск и обработка данных
+            document.getElementById('elasticsearch').checked = formData.elasticsearch || false;
+            document.getElementById('ario').checked = formData.ario || false;
+            document.getElementById('ariodocin').value = formData.ariodocin || '';
+
+        }
+    }
+
+    // Функция преобразования JSON в XML
+    function jsonToXML(obj) {
+        let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<SurveyData>\n';
+        for (const prop in obj) {
+            if (obj.hasOwnProperty(prop)) {
+                xml += `  <${prop}>${escapeXML(obj[prop])}</${prop}>\n`;
+            }
+        }
+        xml += '</SurveyData>';
+        return xml;
+    }
+
+    // Функция экранирования специальных символов в XML
+    function escapeXML(str) {
+        if (typeof str !== 'string') {
+            return str;
+        }
+        return str.replace(/&/g, '&amp;')
+
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;')
+                  .replace(/"/g, '&quot;')
+                  .replace(/'/g, '&apos;');
+    }
+
+    // Функция отображения уведомлений с использованием Bootstrap Alerts
+    function showAlert(message, type) {
+        // Создаем динамический элемент alert
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show fixed-top m-3`;
+        alertDiv.role = 'alert';
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
+        `;
+        document.body.appendChild(alertDiv);
+
+        // Автоматически удаляем alert через 3 секунды
+        setTimeout(() => {
+            const alert = bootstrap.Alert.getInstance(alertDiv);
+            if (alert) {
+                alert.close();
+            }
+        }, 3);
+    }
+});
+    </script>  
+</body>
+</html>
