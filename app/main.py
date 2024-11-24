@@ -6,16 +6,19 @@ import math
 import docx
 import xml.etree.ElementTree as ET
 from flask import Flask, request, render_template, send_from_directory, redirect, url_for, jsonify
-from docx.table import Table, _Row
+from docx.table import Table, _Row, _Cell
+from docx.oxml.table import CT_Tbl
+from docx.oxml.text.paragraph import CT_P
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from datetime import datetime
 from typing import List
 from typing import Any
+from docx import Document
+from docx.text.paragraph import Paragraph
 from lxml import etree
 from typing import Union
 from docx.shared import Inches
-from docx import Document
 import subprocess
 import logging
 import shutil
@@ -41,7 +44,7 @@ app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024  # Максимальный �
 
 # Настройка логирования
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(f"app.log", encoding='utf-8'),
@@ -54,6 +57,10 @@ logger = logging.getLogger(__name__)
 layers_to_toggle = []
 
 #=======================================================Маршуруты============================================================#
+@app.route('/questionnaire', methods=['GET'])
+def questionnaire():
+    return render_template('questionnaire.html')
+
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
@@ -111,6 +118,10 @@ def upload_xml():
     logging.debug(f"Отказоустойчивость {redundancy}")
     monitoring = data.get('monitoring', '')
     logging.debug(f"Мониторинг {monitoring}")
+    dev_kontur = data.get('dev_kontur', '')
+    logging.debug(f"Среда разработки {dev_kontur}")
+    test_kontur = data.get('test_kontur', '')
+    logging.debug(f"Тестовый контур {test_kontur}")
     database = data.get('database', '')
     logging.debug(f"Тип СУБД {database}")
         #Активность пользователей
@@ -140,8 +151,8 @@ def upload_xml():
     # Загружаем шаблон Word
     if operationsystem.lower() == "linux":
         template_path = os.path.join(app.config['TEMPLATE_FOLDER'], f'RecomendBaseTpl{version}_linux.docx')
-    elif kubernetes.lower() == "true":
-        template_path = os.path.join(app.config['TEMPLATE_FOLDER'], f'RecomendBaseTpl{version}_kubernetes.docx')
+        if kubernetes.lower() == "true":
+            template_path = os.path.join(app.config['TEMPLATE_FOLDER'], f'RecomendBaseTpl{version}_kubernetes.docx')
     else:
         template_path = os.path.join(app.config['TEMPLATE_FOLDER'], f'RecomendBaseTpl{version}_windows.docx')
     if not os.path.exists(template_path):
@@ -238,6 +249,82 @@ def upload_xml():
             for row in table.rows:
                 for cell in row.cells:
                     replace_placeholder(cell, placeholder, value)
+
+    def iter_block_items(parent):
+        """
+        Генератор для последовательного перебора всех блоков (абзацев и таблиц) в документе.
+        
+        Args:
+            parent: Объект документа или ячейки таблицы.
+        Yields:
+            Объекты Paragraph или Table.
+        """
+        # Проверяем тип объекта через его класс
+        if parent.__class__.__name__ == 'Document':
+            parent_elm = parent.element.body
+        else:
+            parent_elm = parent._element
+            
+        for child in parent_elm.iterchildren():
+            if isinstance(child, CT_P):
+                yield Paragraph(child, parent)
+            elif isinstance(child, CT_Tbl):
+                yield Table(child, parent)
+
+    def get_heading_level(paragraph):
+        """
+        Определяет уровень заголовка абзаца.
+        
+        Args:
+            paragraph: Объект Paragraph.
+        Returns:
+            int: Уровень заголовка или None, если это не заголовок.
+        """
+        style = paragraph.style.name
+        if style.startswith('Heading'):
+            try:
+                return int(style.split(' ')[1])
+            except (IndexError, ValueError):
+                return None
+        return None
+
+    def remove_heading_and_content(doc, heading_text):
+        """
+        Удаляет заголовок с указанным текстом и всё его содержимое до следующего заголовка того же или более высокого уровня.
+        
+        Args:
+            doc: Объект Document из python-docx.
+            heading_text: Текст заголовка, который нужно удалить.
+        """
+        elements_to_remove = []
+        remove_mode = False
+        target_level = None
+
+        for block in iter_block_items(doc):
+            if isinstance(block, Paragraph):
+                current_text = block.text.strip()
+                current_level = get_heading_level(block)
+
+                if remove_mode:
+                    if current_level is not None and current_level <= target_level:
+                        remove_mode = False
+                        continue
+                    elements_to_remove.append(block._element)
+                elif current_text == heading_text:
+                    target_level = get_heading_level(block)
+                    if target_level is not None:
+                        remove_mode = True
+                        elements_to_remove.append(block._element)
+            
+            elif isinstance(block, Table) and remove_mode:
+                elements_to_remove.append(block._element)
+
+        # Удаляем все собранные элементы
+        for element in elements_to_remove:
+            parent = element.getparent()
+            if parent is not None:
+                parent.remove(element)            
+
 #=======================================================Расчеты сервисов============================================================#
     # Расчеты Kubernetes Control-plane
     if kubernetes.lower() == "true":
@@ -746,25 +833,25 @@ def upload_xml():
     additional_lk_hdd = lkcalcultions["additional_lk_hdd"]
         
     #Узел S3 Tool
-    if float(version) >= 4.11:
-        if s3storage.lower() == "false":
-            s3storage_cpu = 0
-            s3storage_ram = 0
-            s3storage_count = 0
-        else:
-            s3storage_cpu = 4
-            s3storage_ram = 4
-            s3storage_count = 1
+    if s3storage.lower() == "false":
+        s3storage_cpu = 0
+        s3storage_ram = 0
+        s3storage_count = 0
+    else:
+        s3storage_cpu = 4
+        s3storage_ram = 4
+        s3storage_count = 1
 
     #=======================================================Расчеты сайзинга хранилищ============================================================#
     #Исторические данные
     importhistorydata_size = round(importhistorydata * midsizedoc /1024 / 1024)
+    logger.info(f"{importhistorydata} * {midsizedoc} = {importhistorydata_size}")
     #Годовой прирост документов
     annualdatagrowth_size = round(annualdatagrowth * midsizedoc / 1024 / 1024)
     #Объем основого хранилища тел документов
-    main_storage_doc = round((annualdatagrowth_size * 6) + importhistorydata_size, 0)
+    main_storage_doc = round((annualdatagrowth_size * 6) + importhistorydata_size)
     #Объем резервного хранилища
-    reserve_storage_doc = round(main_storage_doc*2, 0)
+    reserve_storage_doc = round(main_storage_doc*2)
     #Объем основного хранилища БД
     if concurrent_users != 0 or sql_count != 0:
         main_storage_db = main_storage_doc * 0.025 + (concurrent_users / 100 * 5)
@@ -828,9 +915,9 @@ def upload_xml():
 #=======================================================Вызываем функцию замены плейсхолдеров в word на значения переменных============================================================#
     replacements = {
         # Блок с общей информацией 
+        "UsersPeak": str(concurrent_users if lk_users > 0 else f"{concurrent_users} пользователей «Directum RX» и {lk_users} пользователей  «Личный кабинет»"),
         "CompanyName": str(organization),
         "CurrentDate": str(current_date),
-        "UsersPeak": str(concurrent_users),
         "TotalUsers": str(registeredUsers),
         "ImportPeriod": str("До 250" if dcsdochours < 250 else dcsdochours),
         "ExtIntegration": str(integrationsystems),
@@ -966,6 +1053,7 @@ def upload_xml():
             ario_count, 
             dtes_count, 
             monitoring_count,
+            onlineeditor_count,
             logstash_count,
             lk_count,
             additional_lk_count,
@@ -1015,7 +1103,7 @@ def upload_xml():
                 delete_paragraphs_by_text(doc, "Узел решения «Мониторинг системы Directum RX»")
                 remove_specific_rows(doc, "Узел Logstash", 6)
                 remove_specific_rows(doc, "Разделы для индексов системы мониторинга", 0)
-                if onlineeditor_count == 0:
+            if onlineeditor_count == 0:
                 remove_specific_rows(doc, "Узел решения «Интеграция с онлайн-редакторами OnlyOffice и Р7-Офис»", 6)
                 delete_paragraphs_by_text(doc, "Узел решения «Интеграция с онлайн-редакторами»")
             if logstash_count == 0:
@@ -1041,6 +1129,10 @@ def upload_xml():
                 remove_specific_rows(doc, "Дополнительный сервисный узел Directum RX для «Личный кабинет»", 6)
             if importhistorydata_size == 0:
                 remove_specific_rows(doc, "Исторические данные, объем в ГБ", 0)
+            if test_kontur.lower() == "false":
+                remove_heading_and_content(doc, "Минимальные требования к узлам тестового контура")
+            if dev_kontur.lower() == "false":
+                remove_heading_and_content(doc, "Минимальные требования к узлам контура разработки")
         if kubernetes.lower() == "true":
             if ms_count == 0:
                 remove_specific_rows(doc, "Поды микросервисов Directum RX", 6)
@@ -1087,33 +1179,33 @@ def upload_xml():
                 remove_specific_rows(doc, "Узел Logstash", 6)
             if importhistorydata_size == 0:
                 remove_specific_rows(doc, "Исторические данные, объем в ГБ", 0)
+            if test_kontur.lower() == "false":
+                remove_heading_and_content(doc, "Минимальные требования к узлам тестового контура")
+            if dev_kontur.lower() == "false":
+                remove_heading_and_content(doc, "Минимальные требования к узлам контура разработки")
         if redundancy.lower() == "false":
             delete_paragraphs_by_text(doc, "Представленная инсталляция работает в режиме распределения нагрузки")
             delete_paragraphs_by_text(doc, "Зеленые блоки")
-            delete_paragraphs_by_text(doc, "Красные блоки ")
-    try:
-        logger.info(f"Не используемая информация в шаблоне удалена")
-        delete_unnecessary_information(
-                    kubernetes, 
-                    k8s_count, 
-                    ms_count, 
-                    nomad_count, 
-                    reverseproxy_count, 
-                    dcs_count, 
-                    elasticsearch_count, 
-                    rrm_count, 
-                    s3storage_count, 
-                    ario_count, 
-                    dtes_count, 
-                    monitoring_count,
-                    onlineeditor_count,
-                    logstash_count,
-                    lk_count,
-                    additional_lk_count,
-                    redundancy
-                    )
-    except:
-        logger.error(f"Ошибко при выполнении функции delete_unnecessary_information")
+            delete_paragraphs_by_text(doc, "Красные блоки")
+    delete_unnecessary_information(
+                kubernetes, 
+                k8s_count, 
+                ms_count, 
+                nomad_count, 
+                reverseproxy_count, 
+                dcs_count, 
+                elasticsearch_count, 
+                rrm_count, 
+                s3storage_count, 
+                ario_count, 
+                dtes_count, 
+                monitoring_count,
+                onlineeditor_count,
+                logstash_count,
+                lk_count,
+                additional_lk_count,
+                redundancy
+                )
 
     #=======================================================Подготавливаем имя файла для сохранения ============================================================#
     def sanitize_filename(filename):
@@ -1213,6 +1305,7 @@ def upload_xml():
             '-o', png_output_path,
             '-f', 'png',
             '-b', '5',
+            #'--no-sandbox'
         ]
         
         logging.debug(f"Выполнение команды: {' '.join(command)}")
@@ -1314,14 +1407,16 @@ def upload_xml():
     app.config['TEMPLATE_SCHEMES'] = TEMPLATE_SCHEMES
 
     #Функция с условиями выбора схемы
-    def select_scheme_template(redundancy, operationsystem, kubernetes, lk_users, concurrent_users) -> str:
+    def select_scheme_template(redundancy, operationsystem, kubernetes, lk_users, concurrent_users):
         base_path = app.config['TEMPLATE_SCHEMES']
         if kubernetes.lower() == "true":
             return os.path.join(base_path, 'kubernetes.drawio')
         if operationsystem.lower() == 'linux':
-                if redundancy:
-                    if lk_users > 0:
+                if redundancy.lower() == "true":
+                    if lk_users > 0 and concurrent_users > 499:
                         return os.path.join(base_path, 'ha-hrpro.drawio')
+                    if lk_users > 0 and concurrent_users <= 499:
+                        return os.path.join(base_path, 'pg-ha-lk-noms.drawio')
                     else:
                         return os.path.join(base_path, 'ha.drawio' if concurrent_users > 499 else 'ha-noms.drawio')
                 else:
@@ -1330,7 +1425,7 @@ def upload_xml():
                     else:
                         return os.path.join(base_path, 'standalone.drawio')
         elif operationsystem.lower() == 'windows':
-            return os.path.join(base_path, 'ha-ms.drawio' if redundancy else 'standalone-ms.drawio')
+            return os.path.join(base_path, 'ha-ms.drawio' if redundancy.lower() == "true" else 'standalone-ms.drawio')
     
     #Вызываем функцию и записываем выбор в переменную
     scheme_template = select_scheme_template(
