@@ -21,6 +21,7 @@ from typing import Union
 from docx.shared import Inches
 import subprocess
 import logging
+import logging.handlers
 import shutil
 
 app = Flask(__name__)
@@ -43,15 +44,33 @@ app.config['TEMPLATE_FOLDER'] = TEMPLATE_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024  # Максимальный размер файла: 1MB
 
 # Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(f"app.log", encoding='utf-8'),
-        logging.StreamHandler()
-    ]
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
 )
+
+file_handler = logging.handlers.TimedRotatingFileHandler(
+    filename='logs/app.log',
+    when='midnight',
+    interval=1,
+    backupCount=30,
+    encoding='utf-8'
+)
+file_handler.setFormatter(formatter)
+
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(formatter)
+
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+
+# Отключаем логи от werkzeug
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 #Массив для отключения сервисов при составлении схемы
 layers_to_toggle = []
@@ -67,28 +86,33 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_xml():
+    logger.info("Начата обработка загруженного XML файла")
     if 'xml_file' not in request.files:
+        logger.error("Файл не был загружен в запросе")
         return "Файл не загружен", 400
+    
     file = request.files['xml_file']
     if file.filename == '':
+        logger.error("Загружен файл с пустым именем")
         return "Имя файла пустое", 400
+    
     if not file.filename.lower().endswith('.xml'):
+        logger.error(f"Попытка загрузки файла неверного формата: {file.filename}")
         return "Неподдерживаемый формат файла. Пожалуйста, загрузите XML файл.", 400
     
 #=======================================================Работа с XML============================================================#
     
     # Сохраняем загруженный XML файл
-    filename = f"{uuid.uuid4()}.xml"
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
-
-    # Парсим XML файл
-    try:
+    try: 
+        filename = f"{uuid.uuid4()}.xml"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        logger.info(f"XML файл успешно сохранен: {filepath}")
         tree = ET.parse(filepath)
         root = tree.getroot()
-        logging.debug(f"Парсинг XML выполнен успешно")
+        logger.debug("XML файл успешно распарсен")
     except ET.ParseError:
-        logging.error(f"Не удалось спарсить данные в XML")
+        logger.error(f"Не удалось спарсить данные в XML")
         raise
 
     # Извлекаем необходимые данные из XML
@@ -121,7 +145,6 @@ def upload_xml():
     dev_kontur = data.get('dev_kontur', '')
     logging.debug(f"Среда разработки {dev_kontur}")
     test_kontur = data.get('test_kontur', '')
-    logging.debug(f"Тестовый контур {test_kontur}")
     database = data.get('database', '')
     logging.debug(f"Тип СУБД {database}")
         #Активность пользователей
@@ -711,36 +734,62 @@ def upload_xml():
         layers_to_toggle.append("ARIO")
 
     #Узлы RRM
-    if redundancy.lower() == "true":
-        rrm_count = 3
-        rrm_hdd = 50  
-    else:
-        rrm_count = 1
-        rrm_hdd = 50
-    if concurrent_users < 5000:
-        rrm_cpu = rrm_ram = 2 
-        rrm_hdd = 50
-    elif concurrent_users > 10000:
-        rrm_cpu = rrm_ram = 6 
-        rrm_hdd = 50
-    else: 
-        rrm_cpu = rrm_ram = 4
-        rrm_hdd = 50
-    if concurrent_users > 500:
-        if concurrent_users < 5000:
-            rrm_cpu = rrm_ram = 2 
-            rrm_hdd = 50
-        elif concurrent_users > 10000:
-            rrm_cpu = rrm_ram = 6 
-            rrm_hdd = 50
-        else: 
-            rrm_cpu = rrm_ram = 4
-            rrm_hdd = 50
-    else:
-        rrm_count = 0
-        rrm_cpu = 0
-        rrm_ram = 0
-        rrm_hdd = 0
+    def calculate_rrm(redundancy, concurrent_users):
+        def calculate_rrm_count(redundancy, concurrent_users):
+            if redundancy.lower() == "true" or concurrent_users > 500:
+                if redundancy.lower() == "true":
+                    result = 3
+                else:
+                    result = 1
+            else:
+                result = 0
+            return result
+        rrm_count = calculate_rrm_count(redundancy, concurrent_users)
+
+        def calculate_rrm_cpu(rrm_count, redundancy, concurrent_users):
+            if rrm_count != 0:
+                if concurrent_users < 5000:
+                    result = 2
+                elif concurrent_users > 10000:
+                    result = 6
+                else:
+                    result = 4
+            else:
+                result = 0
+            return result
+        rrm_cpu = calculate_rrm_cpu(rrm_count, redundancy, concurrent_users)
+
+        def calculate_rrm_ram(rrm_count, redundancy, concurrent_users):
+            if rrm_count != 0:
+                if concurrent_users < 5000:
+                    result = 2
+                elif concurrent_users > 10000:
+                    result = 6
+                else:
+                    result = 4
+            else:
+                result = 0
+            return result
+        rrm_ram = calculate_rrm_ram(rrm_count, redundancy, concurrent_users)
+
+        def calculate_rrm_hdd(rrm_count):
+            if rrm_count != 0:
+                result = 50
+            else:
+                result = 0
+            return result
+        rrm_hdd = calculate_rrm_hdd(rrm_count)
+        return {
+            "rrm_count": rrm_count, 
+            "rrm_cpu": rrm_cpu, 
+            "rrm_ram": rrm_ram, 
+            "rrm_hdd": rrm_hdd
+        }
+    rrm = calculate_rrm(redundancy, concurrent_users)
+    rrm_count = rrm["rrm_count"]
+    rrm_cpu = rrm["rrm_cpu"]
+    rrm_ram = rrm["rrm_ram"]
+    rrm_hdd = rrm["rrm_hdd"]
 
     #Узлы интеграции с онлайн редакторами
     if onlineeditor.lower() != "none":
@@ -915,7 +964,7 @@ def upload_xml():
 #=======================================================Вызываем функцию замены плейсхолдеров в word на значения переменных============================================================#
     replacements = {
         # Блок с общей информацией 
-        "UsersPeak": str(concurrent_users if lk_users > 0 else f"{concurrent_users} пользователей «Directum RX» и {lk_users} пользователей  «Личный кабинет»"),
+        "UsersPeak": str(f"{concurrent_users} пользователей «Directum RX»" if lk_users == 0 else f"{concurrent_users} пользователей «Directum RX» и {lk_users} пользователей  «Личный кабинет»"),
         "CompanyName": str(organization),
         "CurrentDate": str(current_date),
         "TotalUsers": str(registeredUsers),
@@ -1128,7 +1177,7 @@ def upload_xml():
             if additional_lk_count == 0:
                 remove_specific_rows(doc, "Дополнительный сервисный узел Directum RX для «Личный кабинет»", 6)
             if importhistorydata_size == 0:
-                remove_specific_rows(doc, "Исторические данные, объем в ГБ", 0)
+                remove_specific_rows(doc, "Исторические данные", 0)
             if test_kontur.lower() == "false":
                 remove_heading_and_content(doc, "Минимальные требования к узлам тестового контура")
             if dev_kontur.lower() == "false":
@@ -1347,11 +1396,13 @@ def upload_xml():
             nonlocal replaced
             for paragraph in paragraphs:
                 if placeholder in paragraph.text:
+                    # Объединение всех runs в одном тексте
                     inline = paragraph.runs
                     for i in range(len(inline)):
                         if placeholder in inline[i].text:
                             text = inline[i].text.replace(placeholder, "")
                             inline[i].text = text
+                            # Добавляем изображение только один раз после замены placeholder
                             run = paragraph.add_run()
                             try:
                                 if width_inches:
@@ -1448,7 +1499,7 @@ def upload_xml():
         replace_placeholder_with_image(
             placeholder="PASTESCHEME",
             image_path=saved_scheme,
-            width_inches=6
+            width_inches=5
         )
         logger.info(f"Заполнитель  успешно заменен на изображение  в документе.")
     except ValueError as ve:
