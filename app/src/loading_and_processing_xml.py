@@ -22,13 +22,6 @@ logger = logging.getLogger(__name__)
 
 layers_to_toggle = []
 
-calculation_status = {
-    'status': 'not_started',  # 'not_started', 'processing', 'completed', 'failed'
-    'progress': 0,
-    'message': '',
-    'report_link': None
-}
-
 def upload_xml():
     logger.info("Начата обработка загруженного XML файла")
     if 'xml_file' not in request.files:
@@ -102,8 +95,6 @@ def upload_xml():
     ario = data.get('ario', '')
     ariodocin = int(data.get('ariodocin', ''))
 
-    calculation_status['progress'] = 30
-    calculation_status['message'] = 'Расчет конфигурации...'
     # Calculating resources and assigning values to variables
     k8s_resources = k8s.calculate_kubernetes(kubernetes)
     webserver_resources = webserver.calculate_webserver(concurrent_users, redundancy)
@@ -377,9 +368,6 @@ def upload_xml():
     report_path = os.path.join(app.config['REPORT_FOLDER'], report_filename)
 
 #=======================================================Функции работы со схемами DrawIO============================================================#
-    
-    calculation_status['progress'] = 60
-    calculation_status['message'] = 'Подготовка схемы...'
     #Указываем место хранение схем
     TEMPLATE_SCHEMES = r'schemes_template'
     app.config['TEMPLATE_SCHEMES'] = TEMPLATE_SCHEMES
@@ -418,14 +406,10 @@ def upload_xml():
     except:
         logging.error(f"Ошибка при рендеринге шаблона 'index.html'")
 
-def upload_xml2():
-    calculation_status['progress'] = 10
-    calculation_status['message'] = 'Обработка XML...'
-    
+
     logger.info("Начата обработка загруженного XML файла")
-    
     xml_data = request.data.decode('utf-8')
-    
+
     # Сохраняем загруженный XML файл
     try: 
         filename = f"{uuid.uuid4()}.xml"
@@ -485,8 +469,6 @@ def upload_xml2():
     ario = data.get('ario', '')
     ariodocin = int(data.get('ariodocin', ''))
 
-    calculation_status['progress'] = 30
-    calculation_status['message'] = 'Вычисление ресурсов сервисов...'
     # Calculating resources and assigning values to variables
     k8s_resources = k8s.calculate_kubernetes(kubernetes)
     webserver_resources = webserver.calculate_webserver(concurrent_users, redundancy)
@@ -519,8 +501,6 @@ def upload_xml2():
     lk_count, lk_cpu, lk_ram, lk_hdd, additional_lk_count, additional_lk_cpu, additional_lk_ram, additional_lk_hdd = lk_resources
     s3storage_cpu, s3storage_ram, s3storage_count = s3storage_resources
 
-    calculation_status['progress'] = 60
-    calculation_status['message'] = 'Вычисление ресурсов хранилищ...'
     #Подгружаем расчеты хранилищ
     main_storage_doc, main_storage_db, reserve_storage_doc, reserve_storage_db, highspeed_storage, elasticsearch_search_index_size, service_db_size, lowspeed_storage, annualdatagrowth_size, importhistorydata_size = storage.calculate_storage(
         importhistorydata, 
@@ -563,8 +543,6 @@ def upload_xml2():
         logstash_hdd
     )
     
-    calculation_status['progress'] = 70
-    calculation_status['message'] = 'Заполнение шаблона...'
     #Подгружаем шаблон Word
     template_path = select_word_template.select_word_template(operationsystem, kubernetes, version, app)
     logger.debug(f"Путь к шаблону: {template_path}")
@@ -764,8 +742,7 @@ def upload_xml2():
     report_path = os.path.join(app.config['REPORT_FOLDER'], report_filename)
 
 #=======================================================Функции работы со схемами DrawIO============================================================#
-    calculation_status['progress'] = 90
-    calculation_status['message'] = 'Вставка схемы...'#Указываем место хранение схем
+    #Указываем место хранение схем
     TEMPLATE_SCHEMES = r'schemes_template'
     app.config['TEMPLATE_SCHEMES'] = TEMPLATE_SCHEMES
     
@@ -788,8 +765,6 @@ def upload_xml2():
     except ValueError as ve:
         logger.error(f"Произошла ошибка: {ve}")
 
-    calculation_status['progress'] = 100
-    calculation_status['message'] = 'Сохранение расчета...'
     doc.save(report_path)
 
     # Удаляем загруженный XML файл (опционально)
