@@ -22,27 +22,8 @@ logger = logging.getLogger(__name__)
 
 layers_to_toggle = []
 
-def upload_xml():
-    logger.info("Начата обработка загруженного XML файла")
-    if 'xml_file' not in request.files:
-        logger.error("Файл не был загружен в запросе")
-        return "Файл не загружен", 400
-    
-    file = request.files['xml_file']
-    if file.filename == '':
-        logger.error("Загружен файл с пустым именем")
-        return "Имя файла пустое", 400
-    
-    if not file.filename.lower().endswith('.xml'):
-        logger.error(f"Попытка загрузки файла неверного формата: {file.filename}")
-        return "Неподдерживаемый формат файла. Пожалуйста, загрузите XML файл.", 400
-    
-    # Сохраняем загруженный XML файл
-    try: 
-        filename = f"{uuid.uuid4()}.xml"
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        logger.info(f"XML файл успешно сохранен: {filepath}")
+def upload_xml(filepath):
+    try:
         tree = ET.parse(filepath)
         root = tree.getroot()
         logger.debug("XML файл успешно распарсен")
