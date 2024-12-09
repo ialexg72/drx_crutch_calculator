@@ -193,22 +193,37 @@ function loadFormData() {
 }
 
 // Обработка экспорта
-function handleExport() {
+async function handleExport() {
     try {
-        const savedData = localStorage.getItem('surveyData');
-        if (!savedData) {
-            showAlert('Нет данных для экспорта.', 'warning');
-            return;
-        }
-
-        const data = JSON.parse(savedData);
-        const xml = jsonToXML(data);
-        downloadXML(xml);
+        const formData = collectFormData();
+        const xmlData = jsonToXML(formData);
         
-        showAlert('Данные успешно экспортированы в XML!', 'success');
+        const response = await fetch('/process-xml', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/xml'
+            },
+            body: xmlData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            // Создаем ссылку на отчет
+            const reportLinkDiv = document.getElementById('reportLink');
+            reportLinkDiv.innerHTML = `<a href="${result.report_link}" class="btn btn-primary" target="_blank">
+                <i class="bi bi-download"></i> Скачать отчет
+            </a>`;
+            
+            // Показываем модальное окно
+            const reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
+            reportModal.show();
+        } else {
+            showAlert(`Ошибка при обработке XML: ${result.error || 'Неизвестная ошибка'}`, 'danger');
+        }
     } catch (error) {
-        console.error('Error exporting data:', error);
-        showAlert('Ошибка при экспорте данных!', 'danger');
+        console.error('Ошибка при экспорте:', error);
+        showAlert('Произошла ошибка при экспорте данных', 'danger');
     }
 }
 

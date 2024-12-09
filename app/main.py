@@ -44,6 +44,31 @@ def upload_xml():
     logger.info(f"XML файл успешно сохранен: {filepath}")
     return loading_and_processing_xml.upload_xml(filepath)
 
+@app.route('/process-xml', methods=['POST'])
+def process_xml_data():
+    logger.info("Начата обработка XML данных из формы")
+    if not request.data:
+        logger.error("XML данные не получены")
+        return jsonify({"error": "XML данные не получены"}), 400
+    
+    # Сохраняем XML данные в файл
+    filename = f"{uuid.uuid4()}.xml"
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    
+    try:
+        with open(filepath, 'wb') as f:
+            f.write(request.data)
+        logger.info(f"XML данные успешно сохранены: {filepath}")
+        
+        # Обработка XML файла
+        result = loading_and_processing_xml.upload_xml(filepath)
+        if isinstance(result, tuple):
+            return result
+        return result
+    except Exception as e:
+        logger.error(f"Ошибка при обработке XML данных: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/reports/<filename>')
 def download_report(filename):
     return send_from_directory(app.config['REPORT_FOLDER'], filename, as_attachment=True)
