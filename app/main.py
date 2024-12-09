@@ -42,7 +42,12 @@ def upload_xml():
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
     logger.info(f"XML файл успешно сохранен: {filepath}")
-    return loading_and_processing_xml.upload_xml(filepath)
+    result = loading_and_processing_xml.upload_xml(filepath)
+    try:
+        logging.debug(f"Рендеринг шаблона 'index.html' с отчетной ссылкой: {result}")
+        return render_template('index.html', report_link=result)
+    except:
+        logging.error(f"Ошибка при рендеринге шаблона 'index.html'")
 
 @app.route('/process-xml', methods=['POST'])
 def process_xml_data():
@@ -51,9 +56,12 @@ def process_xml_data():
         logger.error("XML данные не получены")
         return jsonify({"error": "XML данные не получены"}), 400
     
+    logger.info(f"Получены XML данные размером {len(request.data)} байт")
+    
     # Сохраняем XML данные в файл
     filename = f"{uuid.uuid4()}.xml"
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    logger.info(f"Сохраняем XML в файл: {filepath}")
     
     try:
         with open(filepath, 'wb') as f:
@@ -61,12 +69,17 @@ def process_xml_data():
         logger.info(f"XML данные успешно сохранены: {filepath}")
         
         # Обработка XML файла
+        logger.info("Начинаем обработку XML файла через upload_xml")
         result = loading_and_processing_xml.upload_xml(filepath)
-        if isinstance(result, tuple):
-            return result
-        return result
+        logger.info(f"Получен результат от upload_xml: {result}")           
+        return jsonify({
+            'success': True,
+            'report_link': result,
+            'message': 'Отчет успешно создан'
+        })
     except Exception as e:
         logger.error(f"Ошибка при обработке XML данных: {str(e)}")
+        logger.exception("Полный стек ошибки:")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/reports/<filename>')
