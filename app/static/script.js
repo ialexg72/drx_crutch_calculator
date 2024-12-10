@@ -195,11 +195,12 @@ function loadFormData() {
 // Обработка экспорта
 async function handleExport() {
     try {
+        // Показываем модальное окно загрузки
+        const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+        loadingModal.show();
+
         const formData = collectFormData();
-        console.log('Form data collected:', formData);
-        
         const xmlData = jsonToXML(formData);
-        console.log('XML data generated:', xmlData);
         
         const response = await fetch('/process-xml', {
             method: 'POST',
@@ -209,26 +210,31 @@ async function handleExport() {
             body: xmlData
         });
         
-        console.log('Response status:', response.status);
         const result = await response.json();
-        console.log('Response data:', result);
+        
+        // Скрываем модальное окно загрузки
+        loadingModal.hide();
         
         if (response.ok && result.success) {
-            console.log('Success, showing modal with link:', result.report_link);
             // Создаем ссылку на отчет
             const reportLinkDiv = document.getElementById('reportLink');
             reportLinkDiv.innerHTML = `<a href="${result.report_link}" class="btn btn-primary" target="_blank">
                 <i class="bi bi-download"></i> Скачать отчет
             </a>`;
             
-            // Показываем модальное окно
+            // Показываем модальное окно с результатом
             const reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
             reportModal.show();
         } else {
-            console.error('Error in response:', result);
             showAlert(`Ошибка при обработке XML: ${result.error || 'Неизвестная ошибка'}`, 'danger');
         }
     } catch (error) {
+        // Скрываем модальное окно загрузки в случае ошибки
+        const loadingModal = document.getElementById('loadingModal');
+        if (loadingModal) {
+            bootstrap.Modal.getInstance(loadingModal)?.hide();
+        }
+        
         console.error('Detailed export error:', error);
         showAlert('Произошла ошибка при экспорте данных', 'danger');
     }
