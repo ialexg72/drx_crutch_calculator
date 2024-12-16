@@ -1,14 +1,16 @@
 # app.py
+from fileinput import filename
 import uuid
 import logging
 import logging.config
 import os
-from datetime import datetime
-from src import settings, loading_and_processing_xml
+import base64
+from src import settings, loading_and_processing_xml, utility
 from flask import Flask, render_template, send_from_directory, request, jsonify, redirect, url_for
 
 app = Flask(__name__)
 app.config.from_object(settings.Config) 
+settings.Config.create_folders()  # Create required folders on startup
 
 logging.config.dictConfig(settings.LOGGING_CONFIG)
 logger = logging.getLogger(__name__)
@@ -37,17 +39,22 @@ def upload_xml():
         logger.error(f"Попытка загрузки файла неверного формата: {file.filename}")
         return "Неподдерживаемый формат файла. Пожалуйста, загрузите XML файл.", 400
     
-    # Сохраняем загруженный XML файл
-    filename = f"{uuid.uuid4()}.xml"
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
-    logger.info(f"XML файл успешно сохранен: {filepath}")
-    result = loading_and_processing_xml.upload_xml(filepath)
+    # Сначала сохраняем с временным именем
+    temp_filename = f"temp_{uuid.uuid4()}.xml"
+    temp_filepath = os.path.join(app.config['UPLOAD_FOLDER'], temp_filename)
+    file.save(temp_filepath)
+    logger.info(f"XML файл временно сохранен: {temp_filepath}")
+
     try:
+        result = loading_and_processing_xml.upload_xml(temp_filepath)
         logging.debug(f"Рендеринг шаблона 'index.html' с отчетной ссылкой: {result}")
         return render_template('index.html', report_link=result)
-    except:
-        logging.error(f"Ошибка при рендеринге шаблона 'index.html'")
+    except Exception as e:
+        logging.error(f"Ошибка при обработке файла: {e}")
+        # Удаляем временный файл в случае ошибки
+        if os.path.exists(temp_filepath):
+            os.remove(temp_filepath)
+        return "Ошибка при обработке файла", 500
 
 @app.route('/process-xml', methods=['POST'])
 def process_xml_data():
@@ -55,19 +62,21 @@ def process_xml_data():
     if not request.data:
         logger.error("XML данные не получены")
         return jsonify({"error": "XML данные не получены"}), 400
-    
     logger.info(f"Получены XML данные размером {len(request.data)} байт")
-    
     # Сохраняем XML данные в файл
-    filename = f"{uuid.uuid4()}.xml"
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    encoded_name = request.headers.get('X-Organization-Name', 'VW5rbm93bg==')  # 'Unknown' в Base64
+    try:
+        import base64
+        organization_name = base64.b64decode(encoded_name).decode('utf-8')
+    except Exception as e:
+        logger.error(f"Ошибка при декодировании названия организации: {e}")
+        organization_name = 'Unknown'
+    filepath, _ = utility.generate_filename(organization_name, "xml")
     logger.info(f"Сохраняем XML в файл: {filepath}")
-    
     try:
         with open(filepath, 'wb') as f:
             f.write(request.data)
         logger.info(f"XML данные успешно сохранены: {filepath}")
-        
         # Обработка XML файла
         logger.info("Начинаем обработку XML файла через upload_xml")
         result = loading_and_processing_xml.upload_xml(filepath)

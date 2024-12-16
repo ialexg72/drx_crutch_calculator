@@ -4,13 +4,13 @@ import uuid
 import docx
 import logging
 import logging.config
-from . import settings
+from . import settings, utility
 from flask import Flask,request, render_template, url_for, jsonify
 from datetime import datetime
 import xml.etree.ElementTree as ET
 
 from src.docx import select_word_template, text_edit_func, delete_unnecessary_information
-from src.drawio import drawio_func, select_scheme_template
+from src.drawio import drawio_func, select_scheme_template, select_layers_to_toggle
 from src.calculate import k8s, rrm_services, s3_services, lk_services,webserver, ms, nomad, reverseproxy, storage, sql, ario_services, dcs_services, elasticsearch_services, monitoring_services, onlineeditor_services
 import src.docx.delete_unnecessary_information as delete_unnecessary_information
 
@@ -20,12 +20,24 @@ app.config.from_object(settings.Config)
 logging.config.dictConfig(settings.LOGGING_CONFIG)
 logger = logging.getLogger(__name__)
 
-layers_to_toggle = []
-
 def upload_xml(filepath):
     try:
         tree = ET.parse(filepath)
         root = tree.getroot()
+        
+        # Получаем имя организации
+        organization = root.find(".//organization").text
+        
+        # Генерируем новое имя файла с именем организации
+        new_filepath, _ = utility.generate_filename(organization, "xml")
+        
+        # Переименовываем файл
+        os.rename(filepath, new_filepath)
+        logger.info(f"XML файл переименован: {new_filepath}")
+        
+        # Используем новый путь для дальнейшей обработки
+        filepath = new_filepath
+        
         logger.debug("XML файл успешно распарсен")
     except ET.ParseError:
         logger.error(f"Не удалось спарсить данные в XML")
@@ -344,18 +356,19 @@ def upload_xml(filepath):
         sanitized_filename = f"{name}{ext}"    
         return sanitized_filename
 
-    temp_report_filename = f"Рекомендации_по_характеристикам_серверов_{organization}_{current_date}.docx"
-    report_filename = sanitize_filename(temp_report_filename)
-    report_path = os.path.join(app.config['REPORT_FOLDER'], report_filename)
-
-
-    #Указываем место хранение схем
-    TEMPLATE_SCHEMES = r'schemes_template'
-    app.config['TEMPLATE_SCHEMES'] = TEMPLATE_SCHEMES
+    report_path, report_filename = utility.generate_filename(organization, "docx")
     
     #Вызываем функцию конвертации в PNG
     try:
-        saved_scheme = drawio_func.drawing_scheme(redundancy, layers_to_toggle, template_path, scheme_template)
+        layers_to_toggle = select_layers_to_toggle.main(
+            nomad_count,
+            elasticsearch_count,
+            ario_count,
+            onlineeditor_count,
+            monitoring_count,
+            dcs_count
+        )
+        saved_scheme = drawio_func.drawing_scheme(redundancy, layers_to_toggle, template_path, scheme_template, organization)
         logger.info(f"Схема успешно сохранена в файле {saved_scheme}.") 
     except ValueError as se:
         logger.error(f"Произошла ошибка: {se}")
@@ -373,9 +386,4 @@ def upload_xml(filepath):
         logger.error(f"Произошла ошибка: {ve}")
 
     doc.save(report_path)
-
-    # Удаляем загруженный XML файл (опционально)
-    
-    os.remove(filepath)
-
     return url_for('download_report', filename=report_filename)

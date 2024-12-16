@@ -12,7 +12,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 import logging
 import logging.config
-from src import settings
+from src import settings, utility
 from docx.shared import Inches
 # Импортируем настройки логирования
 logging.config.dictConfig(settings.LOGGING_CONFIG)
@@ -53,13 +53,9 @@ def toggle_layer_visibility(tree: etree._ElementTree, layers: List[etree._Elemen
         layer_name = layer.get('value')
         print(f"Слой '{layer_name}' установлен видимым: {visibility}")
 
-def save_drawio_as_png(tree: etree._ElementTree, scheme_template_path: str, save_dir: str = "tmp") -> str:
-    unique_id = uuid.uuid4()
-    unique_folder = os.path.join(save_dir, f"schema_{unique_id}")
-    os.makedirs(unique_folder, exist_ok=True)
-    scheme_templatename = os.path.splitext(os.path.basename(scheme_template_path))[0]
-    temp_drawio_path = os.path.join(unique_folder, f"{scheme_templatename}.drawio")
-    png_output_path = os.path.join(unique_folder, f"{scheme_templatename}.png")
+def save_drawio_as_png(tree: etree._ElementTree, scheme_template_path: str, organization: str, save_dir: str = "tmp") -> str:
+    temp_drawio_path, _ = utility.generate_filename(organization, "drawio")
+    png_output_path, _ = utility.generate_filename(organization, "png")
     
     # Запись временного файла
     try:
@@ -70,7 +66,8 @@ def save_drawio_as_png(tree: etree._ElementTree, scheme_template_path: str, save
         raise
     
     # Указание пути к исполняемому файлу drawio-exporter
-    drawio_exporter_executable = r"C:\Program Files\draw.io\draw.io.exe"  # Обновите путь, если необходимо
+    drawio_exporter_executable = r"C:\Program Files\draw.io\draw.io.exe"
+    #drawio_exporter_executable = r"drawio"
     
     # Проверка наличия исполняемого файла в PATH или по указанному пути
     if not shutil.which(drawio_exporter_executable):
@@ -163,7 +160,7 @@ def replace_placeholder_with_image(doc, placeholder, image_path, width_inches=No
 
     return replaced
 
-def drawing_scheme(redundancy, layers_to_toggle, template_path, scheme_template):  
+def drawing_scheme(redundancy, layers_to_toggle, template_path, scheme_template, organization):  
     visibility = False
 
     # Шаг 1: Загрузка и парсинг файла
@@ -178,5 +175,5 @@ def drawing_scheme(redundancy, layers_to_toggle, template_path, scheme_template)
     else:
         pass
     # Шаг 4: Сохранение файла
-    saved_file = save_drawio_as_png(tree, scheme_template)
+    saved_file = save_drawio_as_png(tree, scheme_template, organization)
     return saved_file       

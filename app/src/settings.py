@@ -6,11 +6,29 @@ import os
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key'
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-    UPLOAD_FOLDER = os.path.join('uploads')
-    REPORT_FOLDER = os.path.join( 'ready_reports')
+    PARENT_DIR = os.path.abspath(os.path.join(BASE_DIR, '..'))
+    TMP_DIR = os.path.join(PARENT_DIR, 'tmp')
+    UPLOAD_FOLDER = os.path.join(TMP_DIR, 'uploads')
+    REPORT_FOLDER = os.path.join(TMP_DIR, 'ready_reports')
+    SCHEME_FOLDER = os.path.join(TMP_DIR, 'ready_schemes')
     TEMPLATE_FOLDER = os.path.join('word_templates')
     TEMPLATE_SCHEMES = os.path.join('schemes_template')
     MAX_CONTENT_LENGTH = 1 * 1024 * 1024  # 1MB
+
+    @classmethod
+    def create_folders(cls):
+        """Create all required folders if they don't exist."""
+        folders = [
+            cls.TMP_DIR,
+            cls.UPLOAD_FOLDER,
+            cls.REPORT_FOLDER,
+            cls.SCHEME_FOLDER,
+            cls.TEMPLATE_FOLDER,
+            cls.TEMPLATE_SCHEMES
+        ]
+        for folder in folders:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
 
 class DevelopmentConfig(Config):
     DEBUG = True
@@ -48,7 +66,7 @@ LOGGING_CONFIG = {
     'loggers': {
         '': {  # корневой логгер
             'handlers': ['file', 'console'],
-            'level': 'DEBUG',
+            'level': 'INFO',
             'propagate': True
         },
         'werkzeug': {  # логгер для werkzeug

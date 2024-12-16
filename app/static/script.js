@@ -205,7 +205,8 @@ async function handleExport() {
         const response = await fetch('/process-xml', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/xml'
+                'Content-Type': 'application/xml',
+                'X-Organization-Name': btoa(unescape(encodeURIComponent(formData.organization || 'Unknown')))
             },
             body: xmlData
         });
