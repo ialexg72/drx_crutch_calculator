@@ -95,7 +95,7 @@ def upload_xml(filepath):
     nomad_resources = nomad.calculate_nomad(redundancy, mobileusers)
     reverseproxy_resources = reverseproxy.calculate_reverseproxy(redundancy, concurrent_users)
     sql_resources = sql.calculate_sql(redundancy, concurrent_users, lk_users)
-    dcs_resources = dcs_services.calculate_dcs(redundancy, dcsdochours)
+    dcs_resources = dcs_services.calculate_dcs(dcsdochours)
     elasticsearch_resources = elasticsearch_services.calculate_elasticsearch(elasticsearch, annualdatagrowth, midsizedoc)
     ario_resources = ario_services.calculate_ario(operationsystem, ariodocin, ario)
     monitoring_resources = monitoring_services.calculate_monitoring(monitoring, concurrent_users)
@@ -173,7 +173,8 @@ def upload_xml(filepath):
         operationsystem,
         kubernetes,
         lk_users,
-        concurrent_users
+        concurrent_users,
+        ario
     )
 
     replacements = {
@@ -368,6 +369,7 @@ def upload_xml(filepath):
             monitoring_count,
             dcs_count
         )
+        logger.info(f"Выбор слоёв для переключения: {layers_to_toggle}")
         saved_scheme = drawio_func.drawing_scheme(redundancy, layers_to_toggle, template_path, scheme_template, organization)
         logger.info(f"Схема успешно сохранена в файле {saved_scheme}.") 
     except ValueError as se:

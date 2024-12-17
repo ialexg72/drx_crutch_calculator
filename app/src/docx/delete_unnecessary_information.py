@@ -129,7 +129,7 @@ def main(
             text_edit_func.delete_paragraphs_by_text(doc, "Поды с сервисами Ario")
             text_edit_func.delete_paragraphs_by_text(doc, "** - для сервисов Ario рекомендуется использовать процессоры")
         if dtes_count == 0:
-            text_edit_func.remove_specific_rows(doc, "Узел сервисов Directum Text Extractor Service", 6)
+            text_edit_func.remove_specific_rows(doc, "Поды сервисов Directum Text Extractor Service", 6)
         if onlineeditor_count == 0:
             text_edit_func.remove_specific_rows(doc, "Узел решения «Интеграция с онлайн-редакторами OnlyOffice и Р7-Офис»", 6)
             text_edit_func.delete_paragraphs_by_text(doc, "Узел решения «Интеграция с онлайн-редакторами»")

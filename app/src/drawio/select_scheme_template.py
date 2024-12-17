@@ -3,7 +3,7 @@ from flask import current_app
 
 app = current_app
 
-def select_scheme_template(redundancy: str, operating_system: str, kubernetes: str, lk_users: int, concurrent_users: int) -> str:
+def select_scheme_template(redundancy: str, operating_system: str, kubernetes: str, lk_users: int, concurrent_users: int, ario: str) -> str:
     """
     Selects the appropriate scheme template based on the specified parameters.
 
@@ -19,6 +19,8 @@ def select_scheme_template(redundancy: str, operating_system: str, kubernetes: s
     """
     base_path = current_app.config['TEMPLATE_SCHEMES']
 
+    if kubernetes.lower() == "true" and ario.lower() == "true":
+        return os.path.join(base_path, 'kubernetes-ario.drawio')
     if kubernetes.lower() == "true":
         return os.path.join(base_path, 'kubernetes.drawio')
 

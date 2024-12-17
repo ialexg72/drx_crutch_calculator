@@ -41,6 +41,7 @@ def find_layers(tree: etree._ElementTree, layer_names: List[str]) -> List[etree.
     xpath_query += " or ".join(xpath_conditions) + ")]"
     
     layers = tree.xpath(xpath_query)
+    logger.debug(f"Найдено слоев: {len(layers)}, искомые слои: {layer_names}")
     return layers
 
 def toggle_layer_visibility(tree: etree._ElementTree, layers: List[etree._Element], visibility: bool) -> None:
@@ -51,7 +52,7 @@ def toggle_layer_visibility(tree: etree._ElementTree, layers: List[etree._Elemen
         # Установка атрибута 'visible'
         layer.set("visible", "1" if visibility else "0")
         layer_name = layer.get('value')
-        print(f"Слой '{layer_name}' установлен видимым: {visibility}")
+        logger.info(f"Слой '{layer_name}' установлен {('видимым' if visibility else 'невидимым')}")
 
 def save_drawio_as_png(tree: etree._ElementTree, scheme_template_path: str, organization: str, save_dir: str = "tmp") -> str:
     temp_drawio_path, _ = utility.generate_filename(organization, "drawio")
@@ -66,8 +67,8 @@ def save_drawio_as_png(tree: etree._ElementTree, scheme_template_path: str, orga
         raise
     
     # Указание пути к исполняемому файлу drawio-exporter
-    drawio_exporter_executable = r"C:\Program Files\draw.io\draw.io.exe"
-    #drawio_exporter_executable = r"drawio"
+    #drawio_exporter_executable = r"C:\Program Files\draw.io\draw.io.exe"
+    drawio_exporter_executable = r"drawio"
     
     # Проверка наличия исполняемого файла в PATH или по указанному пути
     if not shutil.which(drawio_exporter_executable):
@@ -79,13 +80,13 @@ def save_drawio_as_png(tree: etree._ElementTree, scheme_template_path: str, orga
         '-o', png_output_path,
         '-f', 'png',
         '-b', '5',
-        #'--no-sandbox'
+        '--no-sandbox'
     ]
     
     logger.debug(f"Выполнение команды: {' '.join(command)}")
     
     try:
-        result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8')
         logger.debug(f"drawio-exporter успешно конвертировал файл. Вывод: {result.stdout}")
         if result.stderr:
             logger.warning(f"Предупреждение от drawio-exporter: {result.stderr}")
@@ -162,18 +163,38 @@ def replace_placeholder_with_image(doc, placeholder, image_path, width_inches=No
 
 def drawing_scheme(redundancy, layers_to_toggle, template_path, scheme_template, organization):  
     visibility = False
+    logger.info(f"Начало обработки схемы для организации: {organization}")
+    logger.info(f"Слои для переключения: {layers_to_toggle}")
 
     # Шаг 1: Загрузка и парсинг файла
-    tree = load_drawio_file_lxml(scheme_template)
+    try:
+        tree = load_drawio_file_lxml(scheme_template)
+        logger.info(f"Файл схемы успешно загружен: {scheme_template}")
+    except ValueError as e:
+        logger.error(f"Ошибка при загрузке файла схемы: {e}")
+        raise
 
     if layers_to_toggle:
-        # Шаг 2: Поиск слоёв
-        layers = find_layers(tree, layers_to_toggle)
-
-        # Шаг 3: Изменение видимости слоёв
-        toggle_layer_visibility(tree, layers, visibility)
+        try:
+            # Шаг 2: Поиск слоёв
+            layers = find_layers(tree, layers_to_toggle)
+            if not layers:
+                logger.warning("Не найдено ни одного слоя из списка для переключения")
+            
+            # Шаг 3: Изменение видимости слоёв
+            toggle_layer_visibility(tree, layers, visibility)
+            logger.info(f"Видимость слоев успешно изменена. Всего обработано слоев: {len(layers)}")
+        except Exception as e:
+            logger.error(f"Ошибка при обработке слоев: {e}")
+            raise
     else:
-        pass
+        logger.info("Список слоев для переключения пуст, пропускаем обработку слоев")
+
     # Шаг 4: Сохранение файла
-    saved_file = save_drawio_as_png(tree, scheme_template, organization)
-    return saved_file       
+    try:
+        saved_file = save_drawio_as_png(tree, scheme_template, organization)
+        logger.info(f"Схема успешно сохранена в файл: {saved_file}")
+        return saved_file
+    except Exception as e:
+        logger.error(f"Ошибка при сохранении схемы: {e}")
+        raise

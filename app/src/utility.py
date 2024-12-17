@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime
 from . import settings
 from flask import Flask
@@ -19,12 +20,21 @@ def file_exists(file_path):
     return os.path.exists(file_path)
 
 #функция проверки существования файла
+def sanitize_filename(name):
+    """
+    Очищает строку от недопустимых символов в имени файла Windows.
+    """
+    # Заменяем недопустимые символы на подчеркивание
+    invalid_chars = r'[<>:"/\\|?*]'
+    return re.sub(invalid_chars, '_', name)
+
 def generate_filename(organization, filetype):
     """
     Генерирует имя файла с автоинкрементом версии.
     Пример: organization_v1.xml, organization_v2.xml, и т.д.
     """
-    organization = organization.replace(" ", "_")
+    # Очищаем имя организации от недопустимых символов
+    organization = sanitize_filename(organization.replace(" ", "_"))
     version = 1
     
     while True:

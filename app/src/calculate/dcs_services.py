@@ -1,10 +1,9 @@
 import math
-def calculate_dcs(redundancy: str, dcsdochours: int):
+def calculate_dcs(dcsdochours: int):
     """
     Calculate the number of DCS nodes, CPU, RAM, and HDD.
 
     Parameters:
-    redundancy (str): Whether redundancy is enabled.
     dcsdochours (int): The number of hours.
 
     Returns:
@@ -13,7 +12,7 @@ def calculate_dcs(redundancy: str, dcsdochours: int):
     int: The amount of RAM in GB.
     int: The amount of HDD in GB.
     """
-    if redundancy.lower() == "true":
+    if dcsdochours > 0:
         count = 1
         cpu = math.ceil(dcsdochours / 150) + 2
         ram = math.ceil(dcsdochours / 150) * 2 + 2
