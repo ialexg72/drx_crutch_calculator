@@ -1,7 +1,12 @@
 dev/
 app/ready_report/
+app/schemes/
 app/tmp/
 app/upload
 *.bkp
 *.png
 *.xml
+*.pyc
+*.dtmp
+*.zip
+*.log
