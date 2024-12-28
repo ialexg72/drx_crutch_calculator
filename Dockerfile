@@ -11,10 +11,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgbm1 \
     libasound2 \
     wget \
+    libreoffice \
+    libreoffice-writer \
     && rm -rf /var/lib/apt/lists/*
 
 # Устанавливаем DrawIO
-ENV DRAWIO_VERSION "18.0.1"
+ENV DRAWIO_VERSION "25.0.2"
 WORKDIR /tmp
 RUN wget -O drawio-desktop.deb -q https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb \
     && apt-get update && apt-get install -y ./drawio-desktop.deb \
