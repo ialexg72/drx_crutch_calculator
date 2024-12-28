@@ -1,7 +1,7 @@
-/dev/
-/app/ready_report
-/app/tmp
-/app/upload
-.bkp
-.png
-.xml
+dev/
+app/ready_report/
+app/tmp/
+app/upload
+*.bkp
+*.png
+*.xml
