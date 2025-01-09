@@ -1,7 +1,7 @@
 import math
 import src.utility as utility
 def calculate_nomad(redundancy, mobileusers):
-    if mobileusers != 0:
+    if mobileusers > 50:
         #Расчет ЦПУ
         def calculate_nomad_count(mobileusers, redundancy):
             if redundancy.lower() == "true":
