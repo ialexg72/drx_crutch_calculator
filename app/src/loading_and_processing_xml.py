@@ -177,8 +177,11 @@ def upload_xml(filepath):
         ario
     )
 
+    Titullist = utility.generate_heading(redundancy, lk_users, concurrent_users, organization)
+
     replacements = {
         # Блок с общей информацией 
+        "Titullist": str(Titullist),
         "UsersPeak": str(f"{concurrent_users} пользователей «Directum RX»" if lk_users == 0 else f"{concurrent_users} пользователей «Directum RX» и {lk_users} пользователей  «Личный кабинет»"),
         "CompanyName": str(organization),
         "CurrentDate": str(current_date),

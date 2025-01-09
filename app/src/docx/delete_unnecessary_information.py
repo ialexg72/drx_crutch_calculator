@@ -43,7 +43,7 @@ def main(
             text_edit_func.delete_paragraphs_by_text(doc, "Узлы DCS")
         if elasticsearch_count == 0:
             text_edit_func.remove_specific_rows(doc, "Узел полнотекстового поиска", 6)
-            text_edit_func.remove_specific_rows(doc, "Разделы для индексов полнотекстового поиска", 1)
+            text_edit_func.remove_specific_rows(doc, "Разделы для индексов полнотекстового поиска", 0)
             text_edit_func.delete_paragraphs_by_text(doc, "Узел полнотекстового поиска – виртуальная машина")
             text_edit_func.delete_paragraphs_by_text(doc, "Хранилище для индексов полнотекстового поиска")
         if rrm_count == 0:
@@ -93,8 +93,10 @@ def main(
         if importhistorydata_size == 0:
             text_edit_func.remove_specific_rows(doc, "Исторические данные", 0)
         if test_kontur.lower() == "false":
+            text_edit_func.delete_paragraphs_by_text(doc, "среде тестирования;")
             text_edit_func.remove_heading_and_content(doc, "Минимальные требования к узлам тестового контура")
         if dev_kontur.lower() == "false":
+            text_edit_func.delete_paragraphs_by_text(doc, "среде разработки;")
             text_edit_func.remove_heading_and_content(doc, "Минимальные требования к узлам контура разработки")
     if kubernetes.lower() == "true":
         if ms_count == 0:
@@ -143,8 +145,10 @@ def main(
         if importhistorydata_size == 0:
             text_edit_func.remove_specific_rows(doc, "Исторические данные, объем в ГБ", 0)
         if test_kontur.lower() == "false":
+            text_edit_func.delete_paragraphs_by_text(doc, "среде тестирования;")
             text_edit_func.remove_heading_and_content(doc, "Минимальные требования к узлам тестового контура")
         if dev_kontur.lower() == "false":
+            text_edit_func.delete_paragraphs_by_text(doc, "среде разработки;")
             text_edit_func.remove_heading_and_content(doc, "Минимальные требования к узлам контура разработки")
     if redundancy.lower() == "false":
         text_edit_func.delete_paragraphs_by_text(doc, "Представленная инсталляция работает в режиме распределения нагрузки")

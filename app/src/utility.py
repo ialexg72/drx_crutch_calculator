@@ -56,3 +56,16 @@ def generate_filename(organization, filetype):
         if not os.path.exists(file_path):
             return file_path, filename
         version += 1
+
+def generate_heading(redundancy, lk_users, concurrent_users, organization):
+    if lk_users > 0:
+        if redundancy == "true":
+            heading = f"Рекомендации по характеристикам серверов для {organization} Для одновременной работы {concurrent_users} пользователей «Directum RX» c обеспечением отказоустойчивости"
+        else:
+            heading = f"Рекомендации по характеристикам серверов для {organization} Для одновременной работы {concurrent_users} пользователей «Directum RX» без обеспечением отказоустойчивости"
+    else:
+        if redundancy == "true":
+            heading = f"Рекомендации по характеристикам серверов для {organization} Для одновременной работы {concurrent_users} пользователей «Directum RX» и {lk_users} пользователей  «Личный кабинет» c обеспечением отказоустойчивости"
+        else:
+            heading = f"Рекомендации по характеристикам серверов для {organization} Для одновременной работы {concurrent_users} пользователей «Directum RX» и {lk_users} пользователей  «Личный кабинет» без обеспечением отказоустойчивости"
+    return heading
