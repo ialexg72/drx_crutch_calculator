@@ -41,6 +41,7 @@ function updateDatabaseOptions() {
     const selectedOSValue = selectedOS ? selectedOS.value : null;
     const postgresRadio = document.getElementById('postgres');
     const mssqlRadio = document.getElementById('mssql');
+    const kubernetesCheckbox = document.getElementById('kubernetes');
 
     if (!postgresRadio || !mssqlRadio) return;
 
@@ -48,13 +49,23 @@ function updateDatabaseOptions() {
         mssqlRadio.disabled = true;
         postgresRadio.disabled = false;
         postgresRadio.checked = true;
+        if (kubernetesCheckbox) {
+            kubernetesCheckbox.disabled = false;
+        }
     } else if (selectedOSValue === 'Windows') {
         postgresRadio.disabled = true;
         mssqlRadio.disabled = false;
         mssqlRadio.checked = true;
+        if (kubernetesCheckbox) {
+            kubernetesCheckbox.disabled = true;
+            kubernetesCheckbox.checked = false;
+        }
     } else {
         postgresRadio.disabled = false;
         mssqlRadio.disabled = false;
+        if (kubernetesCheckbox) {
+            kubernetesCheckbox.disabled = false;
+        }
     }
 }
 
