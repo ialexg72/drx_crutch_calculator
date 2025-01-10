@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2 \
     wget \
     libreoffice \
+    libreoffice-java-common \
+    libreoffice-script-provider-python \
+    default-jre \
     libreoffice-writer \
     && rm -rf /var/lib/apt/lists/*
 
@@ -34,6 +37,10 @@ ENV DISPLAY=:99
 # Копируем код приложения
 WORKDIR /app
 COPY app/ /app/
+
+# **Добавляем PYTHONPATH**
+ENV PYTHONPATH=/app:$PYTHONPATH
+ENV LD_LIBRARY_PATH=/usr/lib/libreoffice/program:$LD_LIBRARY_PATH
 
 # Экспонируем порт 5000
 EXPOSE 5000

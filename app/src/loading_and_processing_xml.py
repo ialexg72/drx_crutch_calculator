@@ -390,5 +390,35 @@ def upload_xml(filepath):
     except ValueError as ve:
         logger.error(f"Произошла ошибка: {ve}")
 
+    # Сохраняем документ
     doc.save(report_path)
+    logger.info(f"Документ сохранен: {report_path}")
+
+    # Обновляем оглавление через LibreOffice
+    try:
+        # Запускаем LibreOffice в фоновом режиме
+        soffice_cmd = 'soffice --headless --accept="socket,host=localhost,port=2002;urp;StarOffice.ServiceManager" &'
+        os.system(soffice_cmd)
+        logger.info("LibreOffice запущен в фоновом режиме")
+
+        # Даем LibreOffice время на запуск
+        import time
+        time.sleep(2)
+
+        # Запускаем Python-скрипт для обновления оглавления
+        update_cmd = f'python src/libreoffice_macro.py "{report_path}"'
+        result = os.system(update_cmd)
+        
+        if result == 0:
+            logger.info("Оглавление успешно обновлено")
+        else:
+            logger.error("Ошибка при обновлении оглавления")
+
+        # Завершаем процесс LibreOffice
+        os.system('pkill soffice')
+        logger.info("LibreOffice процесс завершен")
+
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении оглавления: {str(e)}")
+
     return url_for('download_report', filename=report_filename)
