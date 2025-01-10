@@ -20,7 +20,8 @@ def main(
     redundancy,
     importhistorydata_size,
     test_kontur,
-    dev_kontur
+    dev_kontur,
+    operationsystem
     ):
     if kubernetes.lower() == "false":
         if k8s_count == 0:
@@ -46,9 +47,12 @@ def main(
             text_edit_func.remove_specific_rows(doc, "Разделы для индексов полнотекстового поиска", 0)
             text_edit_func.delete_paragraphs_by_text(doc, "Узел полнотекстового поиска – виртуальная машина")
             text_edit_func.delete_paragraphs_by_text(doc, "Хранилище для индексов полнотекстового поиска")
-        if rrm_count == 0:
+        if rrm_count == 0 and operationsystem.lower() == "linux":
             text_edit_func.delete_paragraphs_by_text(doc, "Узлы RabbitMQ, etcd+haproxy+keepalived (RMQ + EHK)")
             text_edit_func.remove_specific_rows(doc, "Узлы RabbitMQ, etcd + keepalived + haproxy (для кластера PG)", 6)
+        if rrm_count == 0 and operationsystem.lower() == "windows":
+            text_edit_func.delete_paragraphs_by_text(doc, "Узлы RabbitMQ")
+            text_edit_func.remove_specific_rows(doc, "Узлы RabbitMQ", 6)
         if s3storage_count == 0:
             text_edit_func.remove_specific_rows(doc, "Узел переноса данных в объектные хранилища S3", 6)
             text_edit_func.delete_paragraphs_by_text(doc, "Объектное S3 хранилище")

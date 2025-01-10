@@ -328,7 +328,8 @@ def upload_xml(filepath):
         redundancy,
         importhistorydata_size,
         test_kontur,
-        dev_kontur
+        dev_kontur,
+        operationsystem
         )
 
     #=======================================================Подготавливаем имя файла для сохранения ============================================================#

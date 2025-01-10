@@ -38,4 +38,4 @@ def select_scheme_template(redundancy: str, operating_system: str, kubernetes: s
             else:
                 return os.path.join(base_path, 'standalone.drawio')
     elif operating_system.lower() == 'windows':
-        return os.path.join(base_path, 'ha-ms.drawio' if redundancy.lower() == "true" else 'standalone-ms.drawio')
+        return os.path.join(base_path, 'ha-ms.drawio' if redundancy.lower() == "true" else 'standalone.drawio')
