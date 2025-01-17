@@ -109,7 +109,7 @@ def main(
             text_edit_func.delete_paragraphs_by_text(doc, "среде разработки;")
             text_edit_func.remove_heading_and_content(doc, "Минимальные требования к узлам контура разработки")
     if kubernetes.lower() == "true":
-        logger.info(f"При выполнение функции delete_unnecessary_information kubernetes значение переменной monotoring_count равно: " {monitoring_count})
+        logger.info(f"При выполнение функции delete_unnecessary_information kubernetes значение переменной monotoring_count равно: {monitoring_count}")
         if lk_count == 0:
             text_edit_func.delete_paragraphs_by_text(doc, "«Личный кабинет» - решение позволяет")
             text_edit_func.delete_paragraphs_by_text(doc, "Архитектура платформы личного кабинета")
