@@ -63,6 +63,7 @@ def upload_xml(filepath):
     s3storage = data.get('s3storage', '')
     redundancy = data.get('redundancy', '')
     monitoring = data.get('monitoring', '')
+    logger.info(f"Значение мониторинга полученное из XML: {monitoring}")
     dev_kontur = data.get('dev_kontur', '')
     test_kontur = data.get('test_kontur', '')
     database = data.get('database', '')

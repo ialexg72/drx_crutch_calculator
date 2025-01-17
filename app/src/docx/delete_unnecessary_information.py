@@ -103,6 +103,25 @@ def main(
             text_edit_func.delete_paragraphs_by_text(doc, "среде разработки;")
             text_edit_func.remove_heading_and_content(doc, "Минимальные требования к узлам контура разработки")
     if kubernetes.lower() == "true":
+        if lk_count == 0:
+            text_edit_func.delete_paragraphs_by_text(doc, "«Личный кабинет» - решение позволяет")
+            text_edit_func.delete_paragraphs_by_text(doc, "Архитектура платформы личного кабинета")
+            text_edit_func.delete_paragraphs_by_text(doc, "Сервер приложения личного кабинета")
+            text_edit_func.delete_paragraphs_by_text(doc, "Сайт личного кабинета (EssSite)")
+            text_edit_func.delete_paragraphs_by_text(doc, "Сервис идентификации (IdentityService)")
+            text_edit_func.delete_paragraphs_by_text(doc, "Cервис подписания (SignService)")
+            text_edit_func.delete_paragraphs_by_text(doc, "Сервис документов (DocumentService)")
+            text_edit_func.delete_paragraphs_by_text(doc, "Сервис сообщений (MessageBroker)")
+            text_edit_func.delete_paragraphs_by_text(doc, "Cервис предпросмотра (PreviewService)")
+            text_edit_func.delete_paragraphs_by_text(doc, "Сервис хранения файлов предпросмотра (PreviewStorage)")
+            text_edit_func.delete_paragraphs_by_text(doc, "Сервис хранения BLOB-объектов (BlobStorageService)")
+            text_edit_func.delete_paragraphs_by_text(doc, "Сервер размещения контента (ContentServer)")
+            text_edit_func.delete_paragraphs_by_text(doc, "Сервер сеансов (SessionServer)")
+            text_edit_func.remove_specific_rows(doc, "Узлы решения «Личный кабинет»", 6)
+            text_edit_func.remove_specific_rows(doc, "Дополнительный сервисный узел Directum RX для «Личный кабинет»", 6)
+            text_edit_func.remove_specific_rows(doc, "HR Pro (личный кабинет)", 0)
+        if additional_lk_count == 0:
+            text_edit_func.remove_specific_rows(doc, "Дополнительный сервисный узел Directum RX для «Личный кабинет»", 6)
         if ms_count == 0:
             text_edit_func.remove_specific_rows(doc, "Поды микросервисов Directum RX", 6)
             text_edit_func.delete_paragraphs_by_text(doc, "Поды микросервисов Directum RX")

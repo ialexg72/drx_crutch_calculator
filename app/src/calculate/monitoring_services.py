@@ -18,16 +18,17 @@ def calculate_monitoring(monitoring, concurrent_users):
     int: The amount of RAM in GB required for logstash.
     int: The size of the monitoring index in GB.
     """
-    monitoring_count = 0
-    monitoring_hdd = 0
-    monitoring_cpu = 0
-    monitoring_ram = 0
-    logstash_count = 0
-    logstash_hdd = 0
-    logstash_cpu = 0
-    logstash_ram = 0
-    monitoring_index_size = 0
-    if monitoring:
+    if monitoring.lower() == "false":
+        monitoring_count = 0
+        monitoring_hdd = 0
+        monitoring_cpu = 0
+        monitoring_ram = 0
+        logstash_count = 0
+        logstash_hdd = 0
+        logstash_cpu = 0
+        logstash_ram = 0
+        monitoring_index_size = 0
+    else:
         monitoring_count = 1
         monitoring_hdd = 50
         monitoring_cpu = 16 if concurrent_users > 3000 else 8
