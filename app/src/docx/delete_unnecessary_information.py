@@ -166,7 +166,7 @@ def main(
             text_edit_func.remove_specific_rows(doc, "Узел решения «Интеграция с онлайн-редакторами OnlyOffice и Р7-Офис»", 6)
             text_edit_func.delete_paragraphs_by_text(doc, "Узел решения «Интеграция с онлайн-редакторами»")
         if monitoring_count == 0:
-            text_edit_func.remove_specific_rows(doc, "Узел решения «Мониторинг системы Directum RX»", 6)
+            text_edit_func.remove_specific_rows(doc, "Узел решения «Мониторинг", 6)
             text_edit_func.delete_paragraphs_by_text(doc, "Узел решения «Мониторинг системы Directum RX»")
             text_edit_func.remove_specific_rows(doc, "Узел Logstash", 6)
             text_edit_func.remove_specific_rows(doc, "Разделы для индексов системы мониторинга", 0)
