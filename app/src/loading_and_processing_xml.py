@@ -115,7 +115,6 @@ def upload_xml(filepath):
     dcs_count, dcs_cpu, dcs_ram, dcs_hdd = dcs_resources
     elasticsearch_count, elasticsearch_cpu, elasticsearch_ram, elasticsearch_hdd = elasticsearch_resources
     ario_count, ario_cpu, ario_ram, ario_hdd, dtes_count, dtes_cpu, dtes_ram, dtes_hdd = ario_resources
-    monitoring_count, monitoring_hdd, monitoring_cpu, monitoring_ram, logstash_count, logstash_hdd, logstash_cpu, logstash_ram, monitoring_index_size = monitoring_resources
     onlineeditor_count, onlineeditor_cpu, onlineeditor_ram, onlineeditor_hdd = onlineeditor_resources
     rrm_count, rrm_cpu, rrm_ram, rrm_hdd = rrm_resources
     lk_count, lk_cpu, lk_ram, lk_hdd, additional_lk_count, additional_lk_cpu, additional_lk_ram, additional_lk_hdd = lk_resources
@@ -145,8 +144,8 @@ def upload_xml(filepath):
         elasticsearch,
         elasticsearch_count,
         elasticsearch_hdd,
-        monitoring_count,
-        monitoring_hdd,
+        monitoring_resources['monitoring_count'],
+        monitoring_resources['monitoring_hdd'],
         ario_count,
         ario_hdd,
         dtes_count,
@@ -159,8 +158,8 @@ def upload_xml(filepath):
         additional_lk_hdd,
         rrm_count,
         rrm_hdd,
-        logstash_count,
-        logstash_hdd
+        monitoring_resources['logstash_count'],
+        monitoring_resources['logstash_hdd']
     )
     
     #Подгружаем шаблон Word
@@ -235,15 +234,15 @@ def upload_xml(filepath):
         "ELASTICRAM": str(elasticsearch_ram),
         "ELASTICHDD": str(elasticsearch_hdd),
         #Мониторинг
-        "MONITORINGCOUNT": str(monitoring_count),
-        "MONITORINGCPU": str(monitoring_cpu),
-        "MONITORINGRAM": str(monitoring_ram),
-        "MONITORINGHDD": str(monitoring_hdd),
+        "MONITORINGCOUNT": str(monitoring_resources['monitoring_count']),
+        "MONITORINGCPU": str(monitoring_resources['monitoring_cpu']),
+        "MONITORINGRAM": str(monitoring_resources['monitoring_ram']),
+        "MONITORINGHDD": str(monitoring_resources['monitoring_hdd']),
         #Доп узел Logstash
-        "LOGSTASHCOUNT": str(logstash_count),
-        "LOGSTASHCPU": str(logstash_cpu),
-        "LOGSTASHRAM": str(logstash_ram),
-        "LOGSTASHHDD": str(logstash_hdd),
+        "LOGSTASHCOUNT": str(monitoring_resources['logstash_count']),
+        "LOGSTASHCPU": str(monitoring_resources['logstash_cpu']),
+        "LOGSTASHRAM": str(monitoring_resources['logstash_ram']),
+        "LOGSTASHHDD": str(monitoring_resources['logstash_hdd']),
         #Интеграция с онлайн редакторами
         "ONLINEEDITORCOUNT": str(onlineeditor_count),
         "ONLINEEDITORCPU": str(onlineeditor_cpu),
@@ -278,18 +277,18 @@ def upload_xml(filepath):
         "S3COUNT": str(s3storage_count),
         #Сумма ресурсов
         "UnitsCPU": str((webserver_count*webserver_cpu)+(ms_count*ms_cpu)+(k8s_count*k8s_cpu)+(nomad_count*nomad_cpu)+(reverseproxy_count*reverseproxy_cpu)+(sql_count*sql_cpu)
-            +(dcs_count*dcs_cpu)+(elasticsearch_count*elasticsearch_cpu)+(monitoring_count*monitoring_cpu)+(ario_count*ario_cpu)+(dtes_count*dtes_cpu)
+            +(dcs_count*dcs_cpu)+(elasticsearch_count*elasticsearch_cpu)+(monitoring_resources['monitoring_count']*monitoring_resources['monitoring_cpu'])+(ario_count*ario_cpu)+(dtes_count*dtes_cpu)
             +(onlineeditor_count*onlineeditor_cpu)+(lk_count*lk_cpu)
             +(additional_lk_count*additional_lk_cpu)
             +(s3storage_count*s3storage_cpu)
-            +(rrm_count*rrm_cpu)+(logstash_count*logstash_cpu)
+            +(rrm_count*rrm_cpu)+(monitoring_resources['logstash_count']*monitoring_resources['logstash_cpu'])
             ), 
         "UnitsRAM": str((webserver_count*webserver_ram)+(ms_count*ms_ram)+(k8s_count*k8s_ram)+(nomad_count*nomad_ram)+(reverseproxy_count*reverseproxy_ram)+(sql_count*sql_ram)
-            +(dcs_count*dcs_ram)+(elasticsearch_count*elasticsearch_ram)+(monitoring_count*monitoring_ram)+(ario_count*ario_ram)+(dtes_count*dtes_ram)
+            +(dcs_count*dcs_ram)+(elasticsearch_count*elasticsearch_ram)+(monitoring_resources['monitoring_count']*monitoring_resources['monitoring_ram'])+(ario_count*ario_ram)+(dtes_count*dtes_ram)
             +(onlineeditor_count*onlineeditor_ram)
             +(lk_count*lk_ram)+(additional_lk_count*additional_lk_ram)
             +(s3storage_count*s3storage_ram)
-            +(rrm_count*rrm_ram)+(logstash_count*logstash_ram)
+            +(rrm_count*rrm_ram)+(monitoring_resources['logstash_count']*monitoring_resources['logstash_ram'])
             ),
         # Прирост и миграция
         "ImportDataSize": str(round(importhistorydata_size / 1024, 1)) + " ТБ" if importhistorydata_size >= 1000 else str(importhistorydata_size) + " ГБ",
@@ -321,16 +320,17 @@ def upload_xml(filepath):
         s3storage_count, 
         ario_count, 
         dtes_count, 
-        monitoring_count,
+        monitoring_resources['monitoring_count'],
         onlineeditor_count,
-        logstash_count,
+        monitoring_resources['logstash_count'],
         lk_count,
         additional_lk_count,
         redundancy,
         importhistorydata_size,
         test_kontur,
         dev_kontur,
-        operationsystem
+        operationsystem,
+        annualdatagrowth
         )
 
     #=======================================================Подготавливаем имя файла для сохранения ============================================================#
@@ -371,7 +371,7 @@ def upload_xml(filepath):
             elasticsearch_count,
             ario_count,
             onlineeditor_count,
-            monitoring_count,
+            monitoring_resources['monitoring_count'],
             dcs_count
         )
         logger.info(f"Выбор слоёв для переключения: {layers_to_toggle}")

@@ -18,33 +18,31 @@ def calculate_monitoring(monitoring, concurrent_users):
     int: The amount of RAM in GB required for logstash.
     int: The size of the monitoring index in GB.
     """
-    if monitoring.lower() == "false":
-        monitoring_count = 0
-        monitoring_hdd = 0
-        monitoring_cpu = 0
-        monitoring_ram = 0
-        logstash_count = 0
-        logstash_hdd = 0
-        logstash_cpu = 0
-        logstash_ram = 0
-        monitoring_index_size = 0
-    else:
-        monitoring_count = 1
-        monitoring_hdd = 50
-        monitoring_cpu = 16 if concurrent_users > 3000 else 8
-        monitoring_ram = 32 if concurrent_users > 3000 else 16 
-        monitoring_index_size = math.ceil(concurrent_users/100*30)
+    resources = {
+        'monitoring_count': 0,
+        'monitoring_hdd': 0,
+        'monitoring_cpu': 0,
+        'monitoring_ram': 0,
+        'logstash_count': 0,
+        'logstash_hdd': 0,
+        'logstash_cpu': 0,
+        'logstash_ram': 0,
+        'monitoring_index_size': 0
+    }
+
+    if monitoring.lower() != "false":
+        # Устанавливаем значения для мониторинга
+        resources['monitoring_count'] = 1
+        resources['monitoring_hdd'] = 50
+        resources['monitoring_cpu'] = 16 if concurrent_users > 3000 else 8
+        resources['monitoring_ram'] = 32 if concurrent_users > 3000 else 16
+        resources['monitoring_index_size'] = math.ceil(concurrent_users / 100 * 30)
+
+        # Устанавливаем значения для Logstash, если количество пользователей больше 2000
         if concurrent_users > 2000:
-            logstash_count = 1
-            logstash_hdd = 50
-            logstash_cpu = 4
-            logstash_ram = 6
-        else: 
-            logstash_hdd = 0
-            logstash_cpu = 0
-            logstash_ram = 0
-    return (
-        monitoring_count, monitoring_hdd, monitoring_cpu, monitoring_ram, 
-        logstash_count, logstash_hdd, logstash_cpu, logstash_ram, 
-        monitoring_index_size
-    )
+            resources['logstash_count'] = 1
+            resources['logstash_hdd'] = 50
+            resources['logstash_cpu'] = 4
+            resources['logstash_ram'] = 6
+
+    return resources
