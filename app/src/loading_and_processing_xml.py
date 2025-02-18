@@ -114,7 +114,7 @@ def upload_xml(filepath):
     sql_count, sql_cpu, sql_ram, sql_hdd = sql_resources
     dcs_count, dcs_cpu, dcs_ram, dcs_hdd = dcs_resources
     elasticsearch_count, elasticsearch_cpu, elasticsearch_ram, elasticsearch_hdd = elasticsearch_resources
-    ario_count, ario_cpu, ario_ram, ario_hdd, dtes_count, dtes_cpu, dtes_ram, dtes_hdd = ario_resources
+    ario_count, ario_cpu, ario_ram, ario_hdd, dtes_count, dtes_cpu, dtes_ram, dtes_hdd, ansible_count, ansible_cpu, ansible_ram, ansible_hdd = ario_resources
     onlineeditor_count, onlineeditor_cpu, onlineeditor_ram, onlineeditor_hdd = onlineeditor_resources
     rrm_count, rrm_cpu, rrm_ram, rrm_hdd = rrm_resources
     lk_count, lk_cpu, lk_ram, lk_hdd, additional_lk_count, additional_lk_cpu, additional_lk_ram, additional_lk_hdd = lk_resources
@@ -257,6 +257,10 @@ def upload_xml(filepath):
         "DTESCPU": str(dtes_cpu),
         "DTESRAM": str(dtes_ram),
         "DTESHDD": str(dtes_hdd),
+        "ANSIBLECOUNT": str(ansible_count),
+        "ANSIBLECPU": str(ansible_cpu),
+        "ANSIBLERAM": str(ansible_ram),
+        "ANSIBLEHDD": str(ansible_hdd),
         #Узлы RabbitMQ, etcd + keepalived + haproxy 
         "RRMCOUNT": str(rrm_count),
         "RRMCPU": str(rrm_cpu),
@@ -330,7 +334,8 @@ def upload_xml(filepath):
         test_kontur,
         dev_kontur,
         operationsystem,
-        annualdatagrowth
+        annualdatagrowth,
+        integrationsystems
         )
 
     #=======================================================Подготавливаем имя файла для сохранения ============================================================#
@@ -396,31 +401,31 @@ def upload_xml(filepath):
     doc.save(report_path)
     logger.info(f"Документ сохранен: {report_path}")
 
-    # Обновляем оглавление через LibreOffice
-    try:
-        # Запускаем LibreOffice в фоновом режиме
-        soffice_cmd = 'soffice --headless --accept="socket,host=localhost,port=2002;urp;StarOffice.ServiceManager" &'
-        os.system(soffice_cmd)
-        logger.info("LibreOffice запущен в фоновом режиме")
+    # # Обновляем оглавление через LibreOffice
+    # try:
+    #     # Запускаем LibreOffice в фоновом режиме
+    #     soffice_cmd = 'soffice --headless --accept="socket,host=localhost,port=2002;urp;StarOffice.ServiceManager" &'
+    #     os.system(soffice_cmd)
+    #     logger.info("LibreOffice запущен в фоновом режиме")
 
-        # Даем LibreOffice время на запуск
-        import time
-        time.sleep(2)
+    #     # Даем LibreOffice время на запуск
+    #     import time
+    #     time.sleep(2)
 
-        # Запускаем Python-скрипт для обновления оглавления
-        update_cmd = f'python src/libreoffice_macro.py "{report_path}"'
-        result = os.system(update_cmd)
+    #     # Запускаем Python-скрипт для обновления оглавления
+    #     update_cmd = f'python src/libreoffice_macro.py "{report_path}"'
+    #     result = os.system(update_cmd)
         
-        if result == 0:
-            logger.info("Оглавление успешно обновлено")
-        else:
-            logger.error("Ошибка при обновлении оглавления")
+    #     if result == 0:
+    #         logger.info("Оглавление успешно обновлено")
+    #     else:
+    #         logger.error("Ошибка при обновлении оглавления")
 
-        # Завершаем процесс LibreOffice
-        os.system('pkill soffice')
-        logger.info("LibreOffice процесс завершен")
+    #     # Завершаем процесс LibreOffice
+    #     os.system('pkill soffice')
+    #     logger.info("LibreOffice процесс завершен")
 
-    except Exception as e:
-        logger.error(f"Ошибка при обновлении оглавления: {str(e)}")
+    # except Exception as e:
+    #     logger.error(f"Ошибка при обновлении оглавления: {str(e)}")
 
     return url_for('download_report', filename=report_filename)

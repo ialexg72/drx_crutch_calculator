@@ -27,7 +27,9 @@ def main(
     importhistorydata_size,
     test_kontur,
     dev_kontur,
-    operationsystem
+    operationsystem,
+    annualdatagrowth,
+    integrationsystems
     ):
     if kubernetes.lower() == "false":
         if k8s_count == 0:
@@ -69,10 +71,14 @@ def main(
             text_edit_func.remove_specific_rows(doc, "Сервисы Ario", 0)
             text_edit_func.delete_paragraphs_by_text(doc, "Сервисы Ario")
             text_edit_func.delete_paragraphs_by_text(doc, "** - для сервисов Ario рекомендуется использовать процессоры")
+            text_edit_func.delete_paragraphs_by_text(doc, "Узел администрирования Ansible")
+            text_edit_func.remove_specific_rows(doc, "Узел администрирования Ansible", 6)
         if dtes_count == 0:
             text_edit_func.remove_specific_rows(doc, "Узел сервисов Directum Text Extractor Service", 6)
+            text_edit_func.delete_paragraphs_by_text(doc, "Узел администрирования Ansible")
+            text_edit_func.remove_specific_rows(doc, "Узел администрирования Ansible", 6)
         if monitoring_count == 0:
-            text_edit_func.remove_specific_rows(doc, "Узел решения «Мониторинг системы Directum RX»", 6)
+            text_edit_func.remove_specific_rows(doc, "Узел решения «Мониторинг", 6)
             text_edit_func.delete_paragraphs_by_text(doc, "Узел решения «Мониторинг системы Directum RX»")
             text_edit_func.remove_specific_rows(doc, "Узел Logstash", 6)
             text_edit_func.remove_specific_rows(doc, "Разделы для индексов системы мониторинга", 0)
@@ -108,6 +114,12 @@ def main(
         if dev_kontur.lower() == "false":
             text_edit_func.delete_paragraphs_by_text(doc, "среде разработки;")
             text_edit_func.remove_heading_and_content(doc, "Минимальные требования к узлам контура разработки")
+        if annualdatagrowth == 0:
+            text_edit_func.remove_heading_and_content(doc, "Расчет хранилища для тел документов (файловое хранилище)")
+        if integrationsystems == "":
+            text_edit_func.remove_specific_rows(doc, "Интеграция с внешними системами", 0)
+            if dcs_count == 0:
+                text_edit_func.remove_specific_rows(doc, "Регулярный импорт данных в систему, интеграция", 0)
     if kubernetes.lower() == "true":
         logger.info(f"При выполнение функции delete_unnecessary_information kubernetes значение переменной monotoring_count равно: {monitoring_count}")
         if lk_count == 0:
@@ -180,6 +192,12 @@ def main(
         if dev_kontur.lower() == "false":
             text_edit_func.delete_paragraphs_by_text(doc, "среде разработки;")
             text_edit_func.remove_heading_and_content(doc, "Минимальные требования к узлам контура разработки")
+        if annualdatagrowth == 0:
+            text_edit_func.remove_heading_and_content(doc, "Расчет хранилища для тел документов (файловое хранилище)")
+        if integrationsystems == "":
+            text_edit_func.remove_specific_rows(doc, "Интеграция с внешними системами", 0)
+        if integrationsystems == "" and dcs_count == "0":
+            text_edit_func.remove_specific_rows(doc, "Регулярный импорт данных в систему, интеграция", 0)
     if redundancy.lower() == "false":
         text_edit_func.delete_paragraphs_by_text(doc, "Представленная инсталляция работает в режиме распределения нагрузки")
         text_edit_func.delete_paragraphs_by_text(doc, "Зеленые блоки")
