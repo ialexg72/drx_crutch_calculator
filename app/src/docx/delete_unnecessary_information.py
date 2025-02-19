@@ -79,7 +79,7 @@ def main(
             text_edit_func.remove_specific_rows(doc, "Узел администрирования Ansible", 6)
         if monitoring_count == 0:
             text_edit_func.remove_specific_rows(doc, "Узел решения «Мониторинг", 6)
-            text_edit_func.delete_paragraphs_by_text(doc, "Узел решения «Мониторинг системы Directum RX»")
+            text_edit_func.delete_paragraphs_by_text(doc, "Узел решения «Мониторинг")
             text_edit_func.remove_specific_rows(doc, "Узел Logstash", 6)
             text_edit_func.remove_specific_rows(doc, "Разделы для индексов системы мониторинга", 0)
         if onlineeditor_count == 0:
@@ -121,7 +121,7 @@ def main(
             if dcs_count == 0:
                 text_edit_func.remove_specific_rows(doc, "Регулярный импорт данных в систему, интеграция", 0)
     if kubernetes.lower() == "true":
-        logger.info(f"При выполнение функции delete_unnecessary_information kubernetes значение переменной monotoring_count равно: {monitoring_count}")
+        logger.info(f"При выполнение функции delete_unnecessary_information kuberneдtes значение переменной monotoring_count равно: {monitoring_count}")
         if lk_count == 0:
             text_edit_func.delete_paragraphs_by_text(doc, "«Личный кабинет» - решение позволяет")
             text_edit_func.delete_paragraphs_by_text(doc, "Архитектура платформы личного кабинета")
@@ -179,7 +179,7 @@ def main(
             text_edit_func.delete_paragraphs_by_text(doc, "Узел решения «Интеграция с онлайн-редакторами»")
         if monitoring_count == 0:
             text_edit_func.remove_specific_rows(doc, "Узел решения «Мониторинг", 6)
-            text_edit_func.delete_paragraphs_by_text(doc, "Узел решения «Мониторинг системы Directum RX»")
+            text_edit_func.delete_paragraphs_by_text(doc, "Узел решения «Мониторинг")
             text_edit_func.remove_specific_rows(doc, "Узел Logstash", 6)
             text_edit_func.remove_specific_rows(doc, "Разделы для индексов системы мониторинга", 0)
         if logstash_count == 0:
