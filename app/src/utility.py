@@ -58,14 +58,14 @@ def generate_filename(organization, filetype):
         version += 1
 
 def generate_heading(redundancy, lk_users, concurrent_users, organization):
-    if lk_users > 0:
+    if lk_users == 0:
         if redundancy == "true":
-            heading = f"Рекомендации по характеристикам серверов для {organization} Для одновременной работы {concurrent_users} пользователей «Directum RX» c обеспечением отказоустойчивости"
+            heading = f"Рекомендации по характеристикам серверов для {organization} для одновременной работы {concurrent_users} пользователей «Directum RX» c обеспечением отказоустойчивости"
         else:
-            heading = f"Рекомендации по характеристикам серверов для {organization} Для одновременной работы {concurrent_users} пользователей «Directum RX» без обеспечением отказоустойчивости"
+            heading = f"Рекомендации по характеристикам серверов для {organization} для одновременной работы {concurrent_users} пользователей «Directum RX» без обеспечения отказоустойчивости"
     else:
         if redundancy == "true":
-            heading = f"Рекомендации по характеристикам серверов для {organization} Для одновременной работы {concurrent_users} пользователей «Directum RX» и {lk_users} пользователей  «Личный кабинет» c обеспечением отказоустойчивости"
+            heading = f"Рекомендации по характеристикам серверов для {organization} для одновременной работы {concurrent_users} пользователей «Directum RX» и {lk_users} пользователей  «Личный кабинет» c обеспечением отказоустойчивости"
         else:
-            heading = f"Рекомендации по характеристикам серверов для {organization} Для одновременной работы {concurrent_users} пользователей «Directum RX» и {lk_users} пользователей  «Личный кабинет» без обеспечением отказоустойчивости"
+            heading = f"Рекомендации по характеристикам серверов для {organization} для одновременной работы {concurrent_users} пользователей «Directum RX» и {lk_users} пользователей  «Личный кабинет» без обеспечения отказоустойчивости"
     return heading

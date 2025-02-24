@@ -67,8 +67,7 @@ def save_drawio_as_png(tree: etree._ElementTree, scheme_template_path: str, orga
         raise
     
     # Указание пути к исполняемому файлу drawio-exporter
-    drawio_exporter_executable = r"C:\Program Files\draw.io\draw.io.exe"
-    #drawio_exporter_executable = r"drawio"
+    drawio_exporter_executable = r"drawio"
     
     # Проверка наличия исполняемого файла в PATH или по указанному пути
     if not shutil.which(drawio_exporter_executable):
@@ -80,7 +79,7 @@ def save_drawio_as_png(tree: etree._ElementTree, scheme_template_path: str, orga
         '-o', png_output_path,
         '-f', 'png',
         '-b', '5',
-        #'--no-sandbox'
+        '--no-sandbox'
     ]
     
     logger.debug(f"Выполнение команды: {' '.join(command)}")

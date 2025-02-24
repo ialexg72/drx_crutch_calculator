@@ -102,6 +102,7 @@ def main(
             text_edit_func.delete_paragraphs_by_text(doc, "Сервер размещения контента (ContentServer)")
             text_edit_func.delete_paragraphs_by_text(doc, "Сервер сеансов (SessionServer)")
             text_edit_func.remove_specific_rows(doc, "Узлы решения «Личный кабинет»", 6)
+            text_edit_func.remove_specific_rows(doc, "Узел сервисов решения «Личный кабинет»", 6)
             text_edit_func.remove_specific_rows(doc, "Дополнительный сервисный узел Directum RX для «Личный кабинет»", 6)
             text_edit_func.remove_specific_rows(doc, "HR Pro (личный кабинет)", 0)
         if additional_lk_count == 0:
@@ -137,6 +138,7 @@ def main(
             text_edit_func.delete_paragraphs_by_text(doc, "Сервер размещения контента (ContentServer)")
             text_edit_func.delete_paragraphs_by_text(doc, "Сервер сеансов (SessionServer)")
             text_edit_func.remove_specific_rows(doc, "Узлы решения «Личный кабинет»", 6)
+            text_edit_func.remove_specific_rows(doc, "Узел сервисов решения «Личный кабинет»", 6)
             text_edit_func.remove_specific_rows(doc, "Дополнительный сервисный узел Directum RX для «Личный кабинет»", 6)
             text_edit_func.remove_specific_rows(doc, "HR Pro (личный кабинет)", 0)
         if additional_lk_count == 0:
