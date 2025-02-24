@@ -86,19 +86,30 @@ function compareVersions(selected, required) {
 function checkVersion() {
     const versionSelect = document.getElementById('version');
     const s3Checkbox = document.getElementById('s3storage');
+    const lkusers = document.getElementById('lkusers')
     
-    if (!versionSelect || !s3Checkbox) return;
+    if (!versionSelect || !s3Checkbox || !lkusers) return;
 
     const selectedVersion = versionSelect.value;
+
     if (!selectedVersion) {
         s3Checkbox.disabled = true;
         s3Checkbox.checked = false;
+        lkusers.disabled = false;
         return;
     }
 
     const comparison = compareVersions(selectedVersion, '4.11');
     s3Checkbox.disabled = comparison < 0;
     if (comparison < 0) s3Checkbox.checked = false;
+
+    // Отключаем поле lkusers при выборе версии 4.12
+    if (selectedVersion === '4.12') {
+        lkusers.disabled = true; // Делаем lkusers недоступным
+        lkusers.value = 0;
+    } else {
+        lkusers.disabled = false; // Активируем поле, если выбрана другая версия
+    }
 }
 
 // Проверка DCS
