@@ -7,6 +7,9 @@ import os
 import base64
 from src import settings, loading_and_processing_xml, utility
 from flask import Flask, render_template, send_from_directory, request, jsonify, redirect, url_for
+from functools import wraps
+from flask import request, Response
+from datetime import datetime
 
 app = Flask(__name__)
 app.config.from_object(settings.Config) 
@@ -14,6 +17,27 @@ settings.Config.create_folders()  # Create required folders on startup
 
 logging.config.dictConfig(settings.LOGGING_CONFIG)
 logger = logging.getLogger(__name__)
+
+USERNAME = 'admin'
+PASSWORD = 'password'
+
+def check_auth(username, password):
+    return username == USERNAME and password == PASSWORD
+
+def authenticate():
+    return Response(
+        'Необходима авторизация.', 401,
+        {'WWW-Authenticate': 'Basic realm="Login Required"'}
+    )
+
+def requires_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or not check_auth(auth.username, auth.password):
+            return authenticate()
+        return f(*args, **kwargs)
+    return decorated
 
 @app.route('/questionnaire', methods=['GET'])
 def questionnaire():
@@ -94,6 +118,22 @@ def process_xml_data():
 @app.route('/reports/<filename>')
 def download_report(filename):
     return send_from_directory(app.config['REPORT_FOLDER'], filename, as_attachment=True)
+
+@app.route('/admin', methods=['GET'])
+@requires_auth
+def admin():
+    reports = []
+    try:
+        for filename in os.listdir(app.config['REPORT_FOLDER']):
+            filepath = os.path.join(app.config['REPORT_FOLDER'], filename)
+            creation_date = os.path.getctime(filepath)
+            reports.append({
+                'name': filename,
+                'creation_date': datetime.fromtimestamp(creation_date).strftime('%Y-%m-%d %H:%M:%S')
+            })
+    except Exception as e:
+        logger.error(f"Ошибка при получении списка отчетов: {e}")
+    return render_template('admin.html', reports=reports)
         
 if __name__ == '__main__':
     app.run(debug=True)

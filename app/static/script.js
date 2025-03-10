@@ -160,6 +160,7 @@ function collectFormData() {
         kubernetes: document.getElementById('kubernetes')?.checked,
         s3storage: document.getElementById('s3storage')?.checked,
         redundancy: document.getElementById('redundancy')?.checked,
+        ansible: document.getElementById('ansible')?.checked,
         test_kontur: document.getElementById('test_kontur')?.checked,
         dev_kontur: document.getElementById('dev_kontur')?.checked,
         monitoring: document.getElementById('monitoring')?.checked,
@@ -180,6 +181,7 @@ function collectFormData() {
         integrationsystems: document.getElementById('integrationsystems')?.value,
         elasticsearch: document.getElementById('elasticsearch')?.checked,
         ario: document.getElementById('ario')?.checked,
+        genii: document.getElementById('genii')?.checked,
         ariodocin: document.getElementById('ariodocin')?.value
     };
 }

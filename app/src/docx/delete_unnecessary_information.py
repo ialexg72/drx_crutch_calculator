@@ -15,7 +15,8 @@ def main(
     dcs_count, 
     elasticsearch_count, 
     rrm_count, 
-    s3storage_count, 
+    s3storage_count,
+    genii, 
     ario_count, 
     dtes_count, 
     monitoring_count,
@@ -24,6 +25,7 @@ def main(
     lk_count,
     additional_lk_count,
     redundancy,
+    ansible,
     importhistorydata_size,
     test_kontur,
     dev_kontur,
@@ -32,6 +34,8 @@ def main(
     integrationsystems
     ):
     if kubernetes.lower() == "false":
+        if genii.lower() == "false":
+            text_edit_func.remove_specific_rows(doc, "Узел сервисов Directum LLM", 7)
         if k8s_count == 0:
             text_edit_func.remove_specific_rows(doc, "Узел администрирования Kubernetes", 6)
             text_edit_func.remove_specific_rows(doc, "Kubernetes API server", 7)
@@ -65,18 +69,16 @@ def main(
             text_edit_func.remove_specific_rows(doc, "Узел переноса данных в объектные хранилища S3", 6)
             text_edit_func.delete_paragraphs_by_text(doc, "Объектное S3 хранилище")
             text_edit_func.delete_paragraphs_by_text(doc, "Узел переноса данных в объектные хранилища S3")
-        if ario_count == 0:
+        if ario_count == 0 and ansible.lower() == "false":
+            text_edit_func.delete_paragraphs_by_text(doc, "Узел администрирования Ansible")
+            text_edit_func.remove_specific_rows(doc, "Узел администрирования Ansible", 6)
+        if ario_count == 0: 
             text_edit_func.remove_specific_rows(doc, "Узел сервисов Directum Ario", 6)
-            text_edit_func.remove_specific_rows(doc, "Узел сервисов Directum Text Extractor Service", 6)
             text_edit_func.remove_specific_rows(doc, "Сервисы Ario", 0)
             text_edit_func.delete_paragraphs_by_text(doc, "Сервисы Ario")
             text_edit_func.delete_paragraphs_by_text(doc, "** - для сервисов Ario рекомендуется использовать процессоры")
-            text_edit_func.delete_paragraphs_by_text(doc, "Узел администрирования Ansible")
-            text_edit_func.remove_specific_rows(doc, "Узел администрирования Ansible", 6)
         if dtes_count == 0:
             text_edit_func.remove_specific_rows(doc, "Узел сервисов Directum Text Extractor Service", 6)
-            text_edit_func.delete_paragraphs_by_text(doc, "Узел администрирования Ansible")
-            text_edit_func.remove_specific_rows(doc, "Узел администрирования Ansible", 6)
         if monitoring_count == 0:
             text_edit_func.remove_specific_rows(doc, "Узел решения «Мониторинг", 6)
             text_edit_func.delete_paragraphs_by_text(doc, "Узел решения «Мониторинг")

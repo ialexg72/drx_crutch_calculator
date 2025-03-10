@@ -62,6 +62,7 @@ def upload_xml(filepath):
     kubernetes = data.get('kubernetes', '')
     s3storage = data.get('s3storage', '')
     redundancy = data.get('redundancy', '')
+    ansible = data.get('ansible', '')
     monitoring = data.get('monitoring', '')
     logger.info(f"Значение мониторинга полученное из XML: {monitoring}")
     dev_kontur = data.get('dev_kontur', '')
@@ -87,6 +88,7 @@ def upload_xml(filepath):
         #Поиск и обработка данных
     elasticsearch = data.get('elasticsearch', '')
     ario = data.get('ario', '')
+    genii = data.get('genii', '')
     ariodocin = int(data.get('ariodocin', ''))
 
     # Calculating resources and assigning values to variables
@@ -321,7 +323,8 @@ def upload_xml(filepath):
         dcs_count, 
         elasticsearch_count, 
         rrm_count, 
-        s3storage_count, 
+        s3storage_count,
+        genii, 
         ario_count, 
         dtes_count, 
         monitoring_resources['monitoring_count'],
@@ -330,6 +333,7 @@ def upload_xml(filepath):
         lk_count,
         additional_lk_count,
         redundancy,
+        ansible,
         importhistorydata_size,
         test_kontur,
         dev_kontur,
